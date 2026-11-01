@@ -1,0 +1,2356 @@
+{% extends "base.html" %}
+
+{% block page_title %}Global Admin Protection & Intelligence Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --adm-cyan: #06b6d4;
+    --adm-emerald: #10b981;
+    --adm-amber: #f59e0b;
+    --adm-rose: #f43f5e;
+    --adm-indigo: #6366f1;
+    --adm-card-bg: rgba(15, 23, 42, 0.85);
+    --adm-border: rgba(255, 255, 255, 0.12);
+}
+
+.admin-hero-card {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(16, 185, 129, 0.12) 100%);
+    border: 1px solid var(--adm-border);
+    border-radius: 20px;
+    padding: 26px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(16px);
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-hero-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #10b981, #06b6d4, #6366f1, #f43f5e);
+}
+
+.adm-kpi-card {
+    background: var(--adm-card-bg);
+    border: 1px solid var(--adm-border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    backdrop-filter: blur(12px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.adm-kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(6, 182, 212, 0.2);
+}
+
+.adm-kpi-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.glow-pulse-red {
+    animation: alertPulse 1.8s infinite;
+}
+
+@keyframes alertPulse {
+    0% { box-shadow: 0 0 10px rgba(244, 63, 94, 0.4); }
+    50% { box-shadow: 0 0 25px rgba(244, 63, 94, 0.8); }
+    100% { box-shadow: 0 0 10px rgba(244, 63, 94, 0.4); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 1. HERO COMMAND BANNER -->
+<div class="admin-hero-card mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, rgba(16,185,129,0.2), rgba(6,182,212,0.3)); border:2px solid #10b981; display:flex; align-items:center; justify-content:center; font-size:1.6rem; color:#10b981;">
+                <i class="fa fa-shield-halved"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-emerald text-dark fw-bold px-3 py-1 font-monospace">HEALTHY LIFE AI GUARDIAN</span>
+                    <span class="badge bg-dark border border-cyan text-cyan font-monospace">SYSTEM COMMAND PORTAL</span>
+                </div>
+                <h2 class="text-white fw-bold mb-0">Global Operations & Intelligence Command</h2>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-sm btn-outline-info px-3 py-2 rounded-3 fw-semibold" onclick="refreshAllAdminLists()">
+                <i class="fa fa-rotate me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- 2. SYSTEM KPI METRICS GRID -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="adm-kpi-card" style="border-left: 4px solid var(--adm-cyan);">
+            <span class="text-secondary small d-block mb-1"><i class="fa fa-steering-wheel text-cyan me-1"></i> Drivers</span>
+            <div class="adm-kpi-val text-cyan">{{ total_drivers|default(1) }}</div>
+            <span class="text-secondary small">Registered Drivers</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="adm-kpi-card" style="border-left: 4px solid var(--adm-emerald);">
+            <span class="text-secondary small d-block mb-1"><i class="fa fa-hospital text-emerald me-1"></i> Hospitals</span>
+            <div class="adm-kpi-val text-emerald">{{ total_hospitals|default(1) }}</div>
+            <span class="text-secondary small">Partner Centers</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="adm-kpi-card" style="border-left: 4px solid var(--adm-rose);">
+            <span class="text-secondary small d-block mb-1"><i class="fa fa-truck-medical text-rose me-1"></i> Ambulances</span>
+            <div class="adm-kpi-val text-rose">{{ total_ambulances|default(1) }}</div>
+            <span class="text-secondary small">Fleet Vehicles</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="adm-kpi-card" style="border-left: 4px solid var(--adm-amber);">
+            <span class="text-secondary small d-block mb-1"><i class="fa fa-users text-warning me-1"></i> Families</span>
+            <div class="adm-kpi-val text-warning">{{ total_families|default(1) }}</div>
+            <span class="text-secondary small">Protected Relatives</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="adm-kpi-card {% if active_emergencies and active_emergencies > 0 %}glow-pulse-red{% endif %}" style="border-left: 4px solid #ef4444;">
+            <span class="text-secondary small d-block mb-1"><i class="fa fa-triangle-exclamation text-danger me-1"></i> Active Emergency</span>
+            <div class="adm-kpi-val text-danger">{{ active_emergencies|default(0) }}</div>
+            <span class="text-secondary small">Live Alerts Active</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="adm-kpi-card" style="border-left: 4px solid var(--adm-indigo);">
+            <span class="text-secondary small d-block mb-1"><i class="fa fa-chart-line text-indigo me-1"></i> Total Incidents</span>
+            <div class="adm-kpi-val text-indigo">{{ total_emergencies|default(1) }}</div>
+            <span class="text-secondary small">Lifetime Triggers</span>
+        </div>
+    </div>
+</div>
+
+<!-- Register Hospital Modal (Full Form) -->
+<div class="modal fade" id="registerHospitalModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.97);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title text-cyan"><i class="fa fa-hospital-user me-2"></i> Register New Hospital</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="hosp-reg-alert" class="alert d-none mb-3"></div>
+        <form id="hospital-reg-form">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label text-muted small">Hospital Name *</label>
+              <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-name" placeholder="e.g. Apollo Speciality Hospital" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-muted small">Hospital Type *</label>
+              <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-hosp-type">
+                <option value="Multi-Speciality">Multi-Speciality</option>
+                <option value="Government">Government</option>
+                <option value="Private">Private</option>
+                <option value="Trust">Trust / Charitable</option>
+                <option value="Clinic">Clinic</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-2">
+              <label class="form-label text-muted small">Hospital Phone Number * <span class="text-danger">(Required)</span></label>
+              <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-phone" placeholder="+91 9876543210" required>
+            </div>
+            <div class="col-md-6 mb-2">
+              <label class="form-label text-muted small">Verify Phone OTP</label>
+              <div class="input-group input-group-sm">
+                <button type="button" class="btn btn-outline-warning" onclick="requestOTP('hospital_reg')"><i class="fa fa-paper-plane"></i> Send OTP</button>
+                <input type="text" class="form-control bg-dark text-white border-secondary" id="reg-hosp-otp" placeholder="123456" maxlength="6">
+                <button type="button" class="btn btn-success" onclick="confirmOTP('hospital_reg')">Verify</button>
+              </div>
+            </div>
+            <div class="col-12" id="otp-status-msg"></div>
+            <div class="col-md-6">
+              <label class="form-label text-muted small">Email Address</label>
+              <input type="email" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-email" placeholder="hospital@example.com">
+            </div>
+            <div class="col-12">
+              <label class="form-label text-muted small">Street Address *</label>
+              <div class="input-group input-group-sm">
+                <textarea class="form-control bg-dark text-white border-secondary" id="reg-hosp-address" rows="2" placeholder="Full street address including landmark" required></textarea>
+                <button class="btn btn-outline-info" type="button" onclick="getLocation()" title="Auto-fill address from GPS"><i class="fa fa-location-crosshairs"></i></button>
+              </div>
+              <input type="hidden" id="reg-hosp-lat">
+              <input type="hidden" id="reg-hosp-lon">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-muted small">City *</label>
+              <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-city" value="Erode" placeholder="City" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-muted small">District *</label>
+              <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-district" value="Erode" placeholder="District" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-muted small">State *</label>
+              <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-state" value="Tamil Nadu" placeholder="State" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-muted small">Pincode *</label>
+              <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-pincode" placeholder="638001" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-muted small">Available Beds</label>
+              <input type="number" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-beds" value="20" min="0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-muted small">ICU Beds</label>
+              <input type="number" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-icubeds" value="5" min="0">
+            </div>
+            <div class="col-12">
+              <label class="form-label text-muted small d-block mb-2">Hospital Capabilities</label>
+              <div class="d-flex flex-wrap gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="reg-hosp-emergency" checked>
+                  <label class="form-check-label text-white small" for="reg-hosp-emergency">Emergency 24/7</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="reg-hosp-icu" checked>
+                  <label class="form-check-label text-white small" for="reg-hosp-icu">ICU Availability</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="reg-hosp-cardio" checked>
+                  <label class="form-check-label text-white small" for="reg-hosp-cardio">Cardiology</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="reg-hosp-neuro" checked>
+                  <label class="form-check-label text-white small" for="reg-hosp-neuro">Neurology</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="reg-hosp-ambulance" checked>
+                  <label class="form-check-label text-white small" for="reg-hosp-ambulance">Ambulance</label>
+                </div>
+              </div>
+            </div>
+            <div class="col-12"><hr class="border-secondary"><p class="text-muted small mb-1">Hospital Admin Login Credentials</p></div>
+            <div class="col-md-6">
+              <label class="form-label text-muted small">Admin Username *</label>
+              <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-username" placeholder="hospital_admin" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label text-muted small">Admin Password *</label>
+              <input type="password" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-hosp-password" placeholder="Min 8 characters" required>
+            </div>
+            <div class="col-12"><hr class="border-secondary"></div>
+            <div class="col-12">
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="reg-hosp-emergency-consent" checked>
+                <label class="form-check-label text-white small" for="reg-hosp-emergency-consent">
+                  <strong>Emergency Notification Consent:</strong> We agree to receive Twilio Voice Calls and SMS updates for assigned emergency cases.
+                </label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top border-secondary">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success btn-sm" id="reg-hosp-submit-btn" onclick="registerHospital()"><i class="fa fa-plus me-1"></i>Register Hospital</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Driver Registration Modal -->
+<div class="modal fade" id="registerDriverModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(6,182,212,0.5);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title text-cyan fw-bold"><i class="fa fa-steering-wheel me-2"></i> Register New Driver</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div id="drv-reg-alert" class="alert d-none mb-3"></div>
+        <form id="driver-reg-form">
+          <!-- Section 1: Personal Information -->
+          <div class="mb-4">
+            <h6 class="text-cyan fw-bold text-uppercase border-bottom border-cyan pb-1 mb-3"><i class="fa fa-id-card me-2"></i> 1. Personal Information</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Full Name *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-name" placeholder="e.g. Raj Kumar" required>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Date of Birth</label>
+                <input type="date" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-dob">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label text-white small fw-semibold">Gender *</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-drv-gender">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Mobile Number *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-phone" placeholder="+91 9876543210" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Email Address</label>
+                <input type="email" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-email" placeholder="raj.kumar@example.com">
+              </div>
+              <div class="col-md-8">
+                <label class="form-label text-white small fw-semibold">Address</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-address" placeholder="Door No, Street Name, Area">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">City *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-city" value="Erode" required>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">District *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-district" value="Erode" required>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">State *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-state" value="Tamil Nadu" required>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Pincode</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-pincode" placeholder="638001">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Driving Information -->
+          <div class="mb-4">
+            <h6 class="text-cyan fw-bold text-uppercase border-bottom border-cyan pb-1 mb-3"><i class="fa fa-car me-2"></i> 2. Driving Information</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Driving Licence Number *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm font-monospace text-uppercase" id="reg-drv-licence" placeholder="TN33-20210012345" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Licence Expiry Date</label>
+                <input type="date" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-licence-expiry">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Vehicle Number *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm font-monospace text-uppercase" id="reg-drv-vehicle" placeholder="TN-33-AX-1234" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Vehicle Type</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-drv-vehicle-type">
+                  <option value="Car / SUV">Car / SUV</option>
+                  <option value="Heavy Vehicle / Truck">Heavy Vehicle / Truck</option>
+                  <option value="Bus / Transport">Bus / Commercial Transport</option>
+                  <option value="Auto Rickshaw / Taxi">Auto / Taxi</option>
+                  <option value="Two Wheeler / Bike">Two Wheeler</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Years of Experience</label>
+                <input type="number" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-exp" value="5" min="0">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Company / Transport Org</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-org" placeholder="e.g. Erode Transport Pvt Ltd">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Emergency Contact Number</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-emg-phone" placeholder="+91 9876500000">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Preferred Voice Language</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-drv-lang">
+                  <option value="en-US">English</option>
+                  <option value="ta-IN">Tamil (தமிழ்)</option>
+                  <option value="hi-IN">Hindi (हिंदी)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Health Information -->
+          <div class="mb-4">
+            <h6 class="text-cyan fw-bold text-uppercase border-bottom border-cyan pb-1 mb-3"><i class="fa fa-heart-pulse me-2"></i> 3. Health & Medical Information</h6>
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Blood Group *</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-drv-blood">
+                  <option value="O+">O+</option>
+                  <option value="A+">A+</option>
+                  <option value="B+">B+</option>
+                  <option value="AB+">AB+</option>
+                  <option value="O-">O-</option>
+                  <option value="A-">A-</option>
+                  <option value="B-">B-</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+              <div class="col-md-9">
+                <label class="form-label text-white small fw-semibold">Known Medical Conditions</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-conditions" placeholder="e.g. Hypertension, Diabetes Type II, None">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Current Medications</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-meds" placeholder="e.g. Amlodipine 5mg, Metformin">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Known Allergies</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-allergies" placeholder="e.g. Penicillin, Dust, None">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Previous Cardiac History</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-cardiac" placeholder="e.g. Angioplasty in 2022, Arrhythmia, None">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Emergency Medical Notes</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-notes" placeholder="Instructions for first responders">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: Account Information -->
+          <div>
+            <h6 class="text-cyan fw-bold text-uppercase border-bottom border-cyan pb-1 mb-3"><i class="fa fa-user-lock me-2"></i> 4. Account Information</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Driver Portal Username *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-username" placeholder="raj_driver" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Secure Password *</label>
+                <input type="password" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-drv-password" placeholder="Min 6 characters" required>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top border-secondary">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-info btn-sm text-dark fw-bold" id="reg-drv-submit-btn" onclick="registerDriver()"><i class="fa fa-plus me-1"></i> Complete Driver Registration</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Family Member Registration Modal -->
+<div class="modal fade" id="registerFamilyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(245,158,11,0.5);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title text-warning fw-bold"><i class="fa fa-users me-2"></i> Register New Family Member</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div id="fam-reg-alert" class="alert d-none mb-3"></div>
+        <form id="family-reg-form">
+          <!-- Section 1: Family Member Information -->
+          <div class="mb-4">
+            <h6 class="text-warning fw-bold text-uppercase border-bottom border-warning pb-1 mb-3"><i class="fa fa-user me-2"></i> 1. Family Member Details</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Full Name *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-name" placeholder="e.g. Priya Kumar" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Relationship with Driver *</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-fam-relation" required>
+                  <option value="Spouse">Spouse (Husband / Wife)</option>
+                  <option value="Parent">Parent (Father / Mother)</option>
+                  <option value="Child">Child (Son / Daughter)</option>
+                  <option value="Sibling">Sibling (Brother / Sister)</option>
+                  <option value="Relative">Other Relative</option>
+                  <option value="Guardian">Guardian</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Date of Birth</label>
+                <input type="date" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-dob">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Gender</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-fam-gender">
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Mobile Number *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-phone" placeholder="+91 9876543210" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Email Address</label>
+                <input type="email" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-email" placeholder="priya.family@example.com">
+              </div>
+              <div class="col-md-12">
+                <label class="form-label text-white small fw-semibold">Address</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-address" placeholder="Address">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">City *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-city" value="Erode">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">District *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-district" value="Erode">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">State *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-state" value="Tamil Nadu">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Pincode</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-pincode" placeholder="638001">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Driver Linking -->
+          <div class="mb-4">
+            <h6 class="text-warning fw-bold text-uppercase border-bottom border-warning pb-1 mb-3"><i class="fa fa-link me-2"></i> 2. Driver Linking *</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Search Registered Driver * <span class="text-info">(Driver ID / Name / Mobile)</span></label>
+                <div class="input-group input-group-sm">
+                  <input type="text" class="form-control bg-dark text-white border-secondary font-monospace" id="reg-fam-driverid" placeholder="Enter Driver ID (e.g. DRV-000001) or Name" required>
+                  <button class="btn btn-outline-info" type="button" onclick="searchDriversLive()"><i class="fa fa-search"></i> Search</button>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Or Select from Active Drivers List</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-fam-driver-dropdown" onchange="if(this.value) { document.getElementById('reg-fam-driverid').value = this.value; selectLinkedDriverPreview(this.value); }">
+                  <option value="">-- Choose Registered Driver --</option>
+                </select>
+              </div>
+              <div class="col-12" id="linked-driver-preview-box">
+                <div class="p-2 bg-dark rounded border border-secondary d-flex align-items-center justify-content-between">
+                  <span class="text-muted small"><i class="fa fa-circle-info me-1 text-info"></i> Enter or select a Driver to link with this Family Member.</span>
+                  <span class="badge bg-secondary font-monospace" id="linked-driver-badge">No Driver Selected</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Emergency Contacts & Notifications -->
+          <div class="mb-4">
+            <h6 class="text-warning fw-bold text-uppercase border-bottom border-warning pb-1 mb-3"><i class="fa fa-bell me-2"></i> 3. Emergency Contact & Preferences</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Primary Emergency Contact</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-primary-emg" placeholder="Primary Mobile Number">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Secondary Emergency Contact</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-sec-emg" placeholder="Secondary Mobile Number">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Notification Preference</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-fam-pref">
+                  <option value="SMS & Voice Call">SMS & Automated Voice Call</option>
+                  <option value="SMS Only">SMS Notification Only</option>
+                  <option value="Voice Call Only">Voice Call Only</option>
+                </select>
+              </div>
+              <div class="col-md-6 d-flex align-items-center gap-4 pt-3">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="reg-fam-sms-consent" checked>
+                  <label class="form-check-label text-white small" for="reg-fam-sms-consent">Enable SMS Alerts</label>
+                </div>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="reg-fam-alert-consent" checked>
+                  <label class="form-check-label text-white small" for="reg-fam-alert-consent">Emergency Calls Enabled</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: Account Information -->
+          <div>
+            <h6 class="text-warning fw-bold text-uppercase border-bottom border-warning pb-1 mb-3"><i class="fa fa-user-lock me-2"></i> 4. Account Information</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Family Portal Username *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-username" placeholder="priya_family" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Secure Password *</label>
+                <input type="password" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-fam-password" placeholder="Min 6 characters" required>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top border-secondary">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning btn-sm text-dark fw-bold" id="reg-fam-submit-btn" onclick="registerFamily()"><i class="fa fa-plus me-1"></i> Complete Family Registration</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Private Ambulance Driver Registration Modal -->
+<div class="modal fade" id="registerAmbulanceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(239,68,68,0.5);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title text-danger fw-bold"><i class="fa fa-truck-medical me-2"></i> Register Private Ambulance Driver</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div id="amb-reg-alert" class="alert d-none mb-3"></div>
+        <form id="ambulance-reg-form">
+          <!-- Section 1: Personal Information -->
+          <div class="mb-4">
+            <h6 class="text-danger fw-bold text-uppercase border-bottom border-danger pb-1 mb-3"><i class="fa fa-user-doctor me-2"></i> 1. Driver Personal Information</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Driver Full Name *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-name" placeholder="e.g. S. Murugan" required>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Date of Birth</label>
+                <input type="date" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-dob">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label text-white small fw-semibold">Gender</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-amb-gender">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Mobile Number *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-phone" placeholder="+91 9876543210" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Email Address</label>
+                <input type="email" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-email" placeholder="murugan.amb@example.com">
+              </div>
+              <div class="col-md-8">
+                <label class="form-label text-white small fw-semibold">Base Address</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-address" placeholder="Hospital / Station Street Address" value="Poondurai Road, Erode">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">City *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-city" value="Erode">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">District *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-district" value="Erode">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">State *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-state" value="Tamil Nadu">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-white small fw-semibold">Pincode</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-pincode" placeholder="638001">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Driving Information -->
+          <div class="mb-4">
+            <h6 class="text-danger fw-bold text-uppercase border-bottom border-danger pb-1 mb-3"><i class="fa fa-id-badge me-2"></i> 2. Driving Information</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Driving Licence Number *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm font-monospace text-uppercase" id="reg-amb-licence" placeholder="TN33-AMB-2022001" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Licence Expiry Date</label>
+                <input type="date" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-licence-expiry">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Years of Experience</label>
+                <input type="number" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-exp" value="6" min="0">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Ambulance Information -->
+          <div class="mb-4">
+            <h6 class="text-danger fw-bold text-uppercase border-bottom border-danger pb-1 mb-3"><i class="fa fa-truck-medical me-2"></i> 3. Ambulance Information</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Ambulance Registration Number *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm font-monospace text-uppercase" id="reg-amb-vehicle" placeholder="TN-33-AM-5678" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Primary Ambulance Type *</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-amb-type">
+                  <option value="Basic Life Support (BLS)">Basic Life Support (BLS)</option>
+                  <option value="Advanced Life Support (ALS)">Advanced Life Support (ALS)</option>
+                  <option value="Cardiac Ambulance">Cardiac Ambulance</option>
+                  <option value="ICU Ambulance">ICU Ambulance</option>
+                  <option value="Neonatal Ambulance">Neonatal Ambulance</option>
+                  <option value="General Ambulance">General Ambulance</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Ambulance Service Provider</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-provider" placeholder="e.g. Erode Emergency Care">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Private Hospital / Organization Name</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-org" placeholder="e.g. Lotus Speciality Hospital Fleet">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Assign Hospital (Optional)</label>
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="reg-amb-hospital">
+                  <option value="">-- Private / Independent Unit --</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Organization Address</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-org-addr" placeholder="Hospital / Station Address">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Emergency Control Contact Number</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-emg-phone" placeholder="+91 424 2282828">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: Ambulance Capabilities -->
+          <div class="mb-4">
+            <h6 class="text-danger fw-bold text-uppercase border-bottom border-danger pb-1 mb-3"><i class="fa fa-kit-medical me-2"></i> 4. Ambulance Capability</h6>
+            <div class="p-3 bg-dark rounded border border-secondary">
+              <label class="form-label text-white small d-block fw-semibold mb-2">Select All Medical Capabilities Provided:</label>
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="form-check">
+                    <input class="form-check-input amb-capability-cb" type="checkbox" value="Basic Life Support (BLS)" id="cap-bls" checked>
+                    <label class="form-check-label text-white small" for="cap-bls">Basic Life Support (BLS)</label>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-check">
+                    <input class="form-check-input amb-capability-cb" type="checkbox" value="Advanced Life Support (ALS)" id="cap-als" checked>
+                    <label class="form-check-label text-white small" for="cap-als">Advanced Life Support (ALS)</label>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-check">
+                    <input class="form-check-input amb-capability-cb" type="checkbox" value="Cardiac Ambulance" id="cap-cardiac" checked>
+                    <label class="form-check-label text-white small" for="cap-cardiac">Cardiac Ambulance</label>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-check">
+                    <input class="form-check-input amb-capability-cb" type="checkbox" value="ICU Ambulance" id="cap-icu">
+                    <label class="form-check-label text-white small" for="cap-icu">ICU Ambulance</label>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-check">
+                    <input class="form-check-input amb-capability-cb" type="checkbox" value="Neonatal Ambulance" id="cap-neonatal">
+                    <label class="form-check-label text-white small" for="cap-neonatal">Neonatal Ambulance</label>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-check">
+                    <input class="form-check-input amb-capability-cb" type="checkbox" value="General Ambulance" id="cap-general" checked>
+                    <label class="form-check-label text-white small" for="cap-general">General Ambulance</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5: Initial Availability & Location -->
+          <div class="mb-4">
+            <h6 class="text-danger fw-bold text-uppercase border-bottom border-danger pb-1 mb-3"><i class="fa fa-location-dot me-2"></i> 5. Initial Availability & Live Location</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Initial Availability Status *</label>
+                <select class="form-select bg-dark text-success border-success form-select-sm fw-bold" id="reg-amb-availability">
+                  <option value="AVAILABLE" selected>AVAILABLE (Ready for Dispatch)</option>
+                  <option value="BUSY">BUSY (On Assignment)</option>
+                  <option value="OFFLINE">OFFLINE (Off Shift)</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Base Latitude</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm font-monospace" id="reg-amb-lat" value="11.3410">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label text-white small fw-semibold">Base Longitude</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm font-monospace" id="reg-amb-lng" value="77.7170">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 6: Account Information -->
+          <div>
+            <h6 class="text-danger fw-bold text-uppercase border-bottom border-danger pb-1 mb-3"><i class="fa fa-user-lock me-2"></i> 6. Account Information</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Ambulance Portal Username *</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-username" placeholder="amb_murugan" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label text-white small fw-semibold">Secure Password *</label>
+                <input type="password" class="form-control bg-dark text-white border-secondary form-control-sm" id="reg-amb-password" placeholder="Min 6 characters" required>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top border-secondary">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger btn-sm fw-bold" id="reg-amb-submit-btn" onclick="registerAmbulance()"><i class="fa fa-plus me-1"></i> Complete Ambulance Registration</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Registration Success Confirmation Modal -->
+<div class="modal fade" id="registrationSuccessModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.98); border: 2px solid var(--adm-emerald);">
+      <div class="modal-header border-bottom border-secondary text-center">
+        <h4 class="modal-title text-success fw-bold w-100"><i class="fa fa-circle-check text-success me-2"></i> Registration Successful!</h4>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <div class="mb-3 mx-auto d-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-20" style="width: 70px; height: 70px; border: 3px solid var(--adm-emerald);">
+          <i class="fa fa-shield-check text-emerald fs-1"></i>
+        </div>
+        <p class="text-secondary small mb-3">The user account has been successfully created and linked to the Healthy Life AI Guardian database.</p>
+        
+        <div class="table-responsive text-start">
+          <table class="table table-dark table-bordered table-sm align-middle">
+            <tr>
+              <th style="width:40%;" class="text-muted small">Registered User Type:</th>
+              <td class="fw-bold text-cyan" id="succ-user-type">Driver</td>
+            </tr>
+            <tr>
+              <th class="text-muted small">Generated Unique ID:</th>
+              <td><span class="badge bg-dark text-emerald border border-emerald font-monospace fs-6" id="succ-generated-id">DRV-482913</span></td>
+            </tr>
+            <tr>
+              <th class="text-muted small">Account Username:</th>
+              <td><code class="text-warning fs-6" id="succ-username">raj.kumar</code></td>
+            </tr>
+            <tr>
+              <th class="text-muted small">Account Status:</th>
+              <td><span class="badge bg-success" id="succ-status">ACTIVE</span></td>
+            </tr>
+            <tr id="succ-linked-row">
+              <th class="text-muted small">Linked Information:</th>
+              <td class="small text-white" id="succ-linked-info">--</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer border-top border-secondary flex-wrap justify-content-center gap-2">
+        <button type="button" class="btn btn-sm btn-info text-dark fw-bold" onclick="viewSuccessProfile()"><i class="fa fa-user me-1"></i> View Profile</button>
+        <button type="button" class="btn btn-sm btn-warning text-dark fw-bold" onclick="editSuccessRegistration()"><i class="fa fa-pen me-1"></i> Edit Registration</button>
+        <button type="button" class="btn btn-sm btn-success text-dark fw-bold" onclick="hideAdminModal('registrationSuccessModal'); showAdminModal('newRegistrationHubModal');"><i class="fa fa-user-plus me-1"></i> Register Another</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" onclick="refreshAllAdminLists()"><i class="fa fa-arrow-left me-1"></i> Back to Dashboard</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Hospital Modal -->
+<div class="modal fade" id="editHospitalModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.97);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title text-warning"><i class="fa fa-pen me-2"></i> Edit Hospital</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="edit-hosp-alert" class="alert d-none mb-3"></div>
+        <input type="hidden" id="edit-hosp-id">
+        <div class="row g-3">
+          <div class="col-md-8"><label class="form-label text-muted small">Hospital Name *</label><input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-name" required></div>
+          <div class="col-md-4"><label class="form-label text-muted small">Hospital Type</label><select class="form-select bg-dark text-white border-secondary form-select-sm" id="edit-hosp-type"><option value="Multi-Speciality">Multi-Speciality</option><option value="Government">Government</option><option value="Private">Private</option><option value="Trust">Trust / Charitable</option><option value="Clinic">Clinic</option></select></div>
+          <div class="col-md-6"><label class="form-label text-muted small">Phone *</label><input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-phone" required></div>
+          <div class="col-md-6"><label class="form-label text-muted small">Email</label><input type="email" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-email"></div>
+          <div class="col-12"><label class="form-label text-muted small">Address *</label><textarea class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-address" rows="2" required></textarea></div>
+          <div class="col-md-4"><label class="form-label text-muted small">City</label><input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-city"></div>
+          <div class="col-md-4"><label class="form-label text-muted small">District</label><input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-district"></div>
+          <div class="col-md-4"><label class="form-label text-muted small">State</label><input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-state"></div>
+          <div class="col-md-4"><label class="form-label text-muted small">Pincode</label><input type="text" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-pincode"></div>
+          <div class="col-md-4"><label class="form-label text-muted small">Available Beds</label><input type="number" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-beds" min="0"></div>
+          <div class="col-md-4"><label class="form-label text-muted small">ICU Beds</label><input type="number" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-icubeds" min="0"></div>
+          <div class="col-12">
+            <div class="d-flex flex-wrap gap-3">
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="edit-hosp-emergency"><label class="form-check-label text-white small" for="edit-hosp-emergency">Emergency 24/7</label></div>
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="edit-hosp-icu"><label class="form-check-label text-white small" for="edit-hosp-icu">ICU Availability</label></div>
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="edit-hosp-cardio"><label class="form-check-label text-white small" for="edit-hosp-cardio">Cardiology</label></div>
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="edit-hosp-neuro"><label class="form-check-label text-white small" for="edit-hosp-neuro">Neurology</label></div>
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="edit-hosp-ambulance"><label class="form-check-label text-white small" for="edit-hosp-ambulance">Ambulance</label></div>
+            </div>
+          </div>
+          <div class="col-md-6"><label class="form-label text-muted small">Status</label><select class="form-select bg-dark text-white border-secondary form-select-sm" id="edit-hosp-status"><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select></div>
+          <div class="col-md-6"><label class="form-label text-muted small">Change Password</label><input type="password" class="form-control bg-dark text-white border-secondary form-control-sm" id="edit-hosp-password" placeholder="Leave blank to keep current"></div>
+        </div>
+      </div>
+      <div class="modal-footer border-top border-secondary">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning btn-sm" onclick="submitEditHospital()"><i class="fa fa-save me-1"></i>Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Directories Tabs -->
+<ul class="nav nav-tabs nav-tabs-custom mb-4 border-secondary" id="adminDirTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active text-cyan" id="tab-hospitals-btn" data-bs-toggle="tab" data-bs-target="#tab-hospitals" type="button" role="tab"><i class="fa fa-hospital me-1"></i> Hospitals</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link text-info" id="tab-drivers-btn" data-bs-toggle="tab" data-bs-target="#tab-drivers" type="button" role="tab"><i class="fa fa-steering-wheel me-1"></i> Drivers</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link text-warning" id="tab-families-btn" data-bs-toggle="tab" data-bs-target="#tab-families" type="button" role="tab"><i class="fa fa-people-group me-1"></i> Families</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link text-danger" id="tab-ambulances-btn" data-bs-toggle="tab" data-bs-target="#tab-ambulances" type="button" role="tab"><i class="fa fa-truck-medical me-1"></i> Ambulances</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link text-success" id="tab-staff-btn" data-bs-toggle="tab" data-bs-target="#tab-staff" type="button" role="tab"><i class="fa fa-user-doctor me-1"></i> Hospital Staff</button>
+  </li>
+</ul>
+
+<div class="tab-content" id="adminDirTabsContent">
+  <!-- Hospitals Tab -->
+  <div class="tab-pane fade show active" id="tab-hospitals" role="tabpanel">
+      <div class="glass-card p-3" style="border: 1px solid rgba(59,130,246,0.3);">
+          <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-3 flex-wrap gap-2">
+              <h6 class="text-white mb-0 fw-bold"><i class="fa fa-hospital text-cyan me-2"></i>REGISTERED HOSPITALS DIRECTORY</h6>
+              <div class="d-flex gap-2">
+                  <input type="text" id="hosp-search-input" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Search hospital ID/name..." style="width:220px;" oninput="filterHospitalsTable()">
+                  <button class="btn btn-sm btn-outline-info" onclick="fetchHospitalsList()"><i class="fa fa-rotate"></i> Refresh</button>
+                  <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#registerHospitalModal"><i class="fa fa-plus me-1"></i>New Hospital</button>
+              </div>
+          </div>
+          <div class="table-responsive">
+              <table class="table table-dark table-hover align-middle" style="font-size:0.88rem;">
+                  <thead>
+                      <tr class="text-secondary">
+                          <th>Hospital ID</th>
+                          <th>Hospital Name</th>
+                          <th>Type</th>
+                          <th>Phone</th>
+                          <th>City / District</th>
+                          <th>Available Beds</th>
+                          <th>Status</th>
+                          <th class="text-end">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody id="hospitals-table-body">
+                      <!-- Populated by JS -->
+                  </tbody>
+              </table>
+          </div>
+      </div>
+  </div>
+
+  <!-- Drivers Tab -->
+  <div class="tab-pane fade" id="tab-drivers" role="tabpanel">
+      <div class="glass-card p-3" style="border: 1px solid rgba(6,182,212,0.3);">
+          <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-3 flex-wrap gap-2">
+              <h6 class="text-white mb-0 fw-bold"><i class="fa fa-steering-wheel text-cyan me-2"></i>REGISTERED DRIVERS DIRECTORY</h6>
+              <div class="d-flex gap-2">
+                  <input type="text" id="drv-search-input" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Search Driver ID/Name..." style="width:220px;" oninput="filterDriversTable()">
+                  <select id="drv-status-filter" class="form-select form-select-sm bg-dark text-white border-secondary" style="width:120px;" onchange="filterDriversTable()">
+                      <option value="ALL">All Status</option>
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                  </select>
+                  <button class="btn btn-sm btn-outline-cyan" onclick="fetchDriversList()"><i class="fa fa-rotate"></i> Refresh</button>
+                  <button class="btn btn-sm btn-info text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#registerDriverModal"><i class="fa fa-plus me-1"></i>New Driver</button>
+              </div>
+          </div>
+          <div class="table-responsive">
+              <table class="table table-dark table-hover align-middle" style="font-size:0.88rem;">
+                  <thead>
+                      <tr class="text-secondary">
+                          <th>Driver ID</th>
+                          <th>Driver Name</th>
+                          <th>Phone</th>
+                          <th>Email</th>
+                          <th>Age / Gender</th>
+                          <th>Blood Group</th>
+                          <th>Status</th>
+                          <th class="text-end">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody id="drivers-table-body">
+                      <!-- Populated by JS -->
+                  </tbody>
+              </table>
+          </div>
+      </div>
+  </div>
+
+  <!-- Families Tab -->
+  <div class="tab-pane fade" id="tab-families" role="tabpanel">
+      <div class="glass-card p-3" style="border: 1px solid rgba(245,158,11,0.3);">
+          <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-3 flex-wrap gap-2">
+              <h6 class="text-white mb-0 fw-bold"><i class="fa fa-people-group text-warning me-2"></i>REGISTERED FAMILY MEMBERS DIRECTORY</h6>
+              <div class="d-flex gap-2">
+                  <input type="text" id="fam-search-input" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Search Family ID/Name..." style="width:220px;" oninput="filterFamiliesTable()">
+                  <select id="fam-status-filter" class="form-select form-select-sm bg-dark text-white border-secondary" style="width:120px;" onchange="filterFamiliesTable()">
+                      <option value="ALL">All Status</option>
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                  </select>
+                  <button class="btn btn-sm btn-outline-warning" onclick="fetchFamiliesList()"><i class="fa fa-rotate"></i> Refresh</button>
+                  <button class="btn btn-sm btn-warning text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#registerFamilyModal" onclick="populateFamilyDriverDropdown()"><i class="fa fa-plus me-1"></i>New Family Member</button>
+              </div>
+          </div>
+          <div class="table-responsive">
+              <table class="table table-dark table-hover align-middle" style="font-size:0.88rem;">
+                  <thead>
+                      <tr class="text-secondary">
+                          <th>Family ID</th>
+                          <th>Family Member Name</th>
+                          <th>Relationship</th>
+                          <th>Linked Driver ID</th>
+                          <th>Linked Driver Name</th>
+                          <th>Phone</th>
+                          <th>Status</th>
+                          <th class="text-end">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody id="families-table-body">
+                      <!-- Populated by JS -->
+                  </tbody>
+              </table>
+          </div>
+      </div>
+  </div>
+
+  <!-- Ambulances Tab -->
+  <div class="tab-pane fade" id="tab-ambulances" role="tabpanel">
+      <div class="glass-card p-3" style="border: 1px solid rgba(239,68,68,0.3);">
+          <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-3 flex-wrap gap-2">
+              <h6 class="text-white mb-0 fw-bold"><i class="fa fa-truck-medical text-danger me-2"></i>REGISTERED AMBULANCE DRIVERS DIRECTORY</h6>
+              <div class="d-flex gap-2">
+                  <input type="text" id="amb-search-input" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Search Ambulance ID/Name..." style="width:220px;" oninput="filterAmbulancesTable()">
+                  <select id="amb-status-filter" class="form-select form-select-sm bg-dark text-white border-secondary" style="width:140px;" onchange="filterAmbulancesTable()">
+                      <option value="ALL">All Status</option>
+                      <option value="AVAILABLE">AVAILABLE</option>
+                      <option value="BUSY">BUSY</option>
+                      <option value="OFFLINE">OFFLINE</option>
+                  </select>
+                  <button class="btn btn-sm btn-outline-danger" onclick="fetchAmbulancesList()"><i class="fa fa-rotate"></i> Refresh</button>
+                  <button class="btn btn-sm btn-danger fw-bold" data-bs-toggle="modal" data-bs-target="#registerAmbulanceModal" onclick="populateAmbulanceHospitalDropdown()"><i class="fa fa-plus me-1"></i>New Ambulance Driver</button>
+              </div>
+          </div>
+          <div class="table-responsive">
+              <table class="table table-dark table-hover align-middle" style="font-size:0.88rem;">
+                  <thead>
+                      <tr class="text-secondary">
+                          <th>Ambulance ID</th>
+                          <th>Driver Name</th>
+                          <th>Vehicle Number</th>
+                          <th>Hospital</th>
+                          <th>Phone</th>
+                          <th>Availability Status</th>
+                          <th class="text-end">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody id="ambulances-table-body">
+                      <!-- Populated by JS -->
+                  </tbody>
+              </table>
+          </div>
+      </div>
+  <!-- Staff Tab -->
+  <div class="tab-pane fade" id="tab-staff" role="tabpanel">
+      <div class="glass-card p-3" style="border: 1px solid rgba(16,185,129,0.3);">
+          <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-3 flex-wrap gap-2">
+              <h6 class="text-white mb-0 fw-bold"><i class="fa fa-user-doctor text-success me-2"></i>REGISTERED HOSPITAL STAFF DIRECTORY</h6>
+              <div class="d-flex gap-2">
+                  <input type="text" id="stf-search-input" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Search Staff ID/Name..." style="width:220px;" oninput="filterStaffTable()">
+                  <select id="stf-status-filter" class="form-select form-select-sm bg-dark text-white border-secondary" style="width:120px;" onchange="filterStaffTable()">
+                      <option value="ALL">All Status</option>
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                  </select>
+                  <button class="btn btn-sm btn-outline-success" onclick="fetchStaffList()"><i class="fa fa-rotate"></i> Refresh</button>
+              </div>
+          </div>
+          <div class="table-responsive">
+              <table class="table table-dark table-hover align-middle" style="font-size:0.88rem;">
+                  <thead>
+                      <tr class="text-secondary">
+                          <th>Staff ID</th>
+                          <th>Staff Name</th>
+                          <th>Role</th>
+                          <th>Username</th>
+                          <th>Hospital</th>
+                          <th>Phone</th>
+                          <th>Status</th>
+                          <th class="text-end">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody id="staff-table-body">
+                      <!-- Populated by JS -->
+                  </tbody>
+              </table>
+          </div>
+      </div>
+  </div>
+</div>
+
+<!-- View Entity Modal -->
+<div class="modal fade" id="viewEntityModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(6,182,212,0.4);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title text-cyan" id="view-modal-title"><i class="fa fa-id-card me-2"></i>Entity Details</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="view-modal-body">
+        <!-- Filled by JS -->
+      </div>
+      <div class="modal-footer border-top border-secondary">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Entity Modal -->
+<div class="modal fade" id="editEntityModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(245,158,11,0.4);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title text-warning"><i class="fa fa-pen-to-square me-2"></i>Edit Registered Record</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="admin-edit-entity-form">
+          <input type="hidden" id="edit-entity-type">
+          <input type="hidden" id="edit-entity-id">
+          <div class="mb-2">
+            <label class="form-label text-white small">Name</label>
+            <input type="text" id="edit-entity-name" class="form-control form-control-sm bg-dark text-white border-secondary">
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-white small">Username</label>
+            <input type="text" id="edit-entity-username" class="form-control form-control-sm bg-dark text-white border-secondary">
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-white small">Phone</label>
+            <input type="text" id="edit-entity-phone" class="form-control form-control-sm bg-dark text-white border-secondary">
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-white small">Email</label>
+            <input type="email" id="edit-entity-email" class="form-control form-control-sm bg-dark text-white border-secondary">
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-white small">New Password <span class="text-muted">(leave blank to keep current)</span></label>
+            <input type="password" id="edit-entity-password" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Enter new password to reset">
+          </div>
+          <div class="mb-2">
+            <label class="form-label text-white small">Status</label>
+            <select id="edit-entity-status" class="form-select form-select-sm bg-dark text-white border-secondary">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+              <option value="Available">Available</option>
+              <option value="Busy">Busy</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top border-secondary">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-warning" onclick="saveAdminEntityEdit()"><i class="fa fa-check me-1"></i>Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hospital Details Modal -->
+<div class="modal fade" id="hospitalDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.95);">
+      <div class="modal-header border-bottom border-secondary">
+        <h5 class="modal-title text-cyan"><i class="fa fa-hospital me-2"></i> <span id="modal-hosp-name">Hospital Details</span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3 text-center">
+            <div class="col-3"><div class="border border-secondary rounded p-2"><h6 class="text-muted small mb-1">Patients</h6><h4 class="text-info mb-0" id="modal-hosp-patients">0</h4></div></div>
+            <div class="col-3"><div class="border border-secondary rounded p-2"><h6 class="text-muted small mb-1">Staff</h6><h4 class="text-primary mb-0" id="modal-hosp-staff">0</h4></div></div>
+            <div class="col-3"><div class="border border-secondary rounded p-2"><h6 class="text-muted small mb-1">Doctors</h6><h4 class="text-success mb-0" id="modal-hosp-doctors">0</h4></div></div>
+            <div class="col-3"><div class="border border-secondary rounded p-2"><h6 class="text-muted small mb-1">Ambulances</h6><h4 class="text-warning mb-0" id="modal-hosp-amb">0</h4></div></div>
+        </div>
+        <ul class="nav nav-tabs nav-tabs-custom mb-3" id="myTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-patients" type="button" role="tab">Admitted Patients</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-staff" type="button" role="tab">Staff Roster</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-emergencies" type="button" role="tab">Emergencies</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link text-cyan" data-bs-toggle="tab" data-bs-target="#tab-verify-admin" type="button" role="tab"><i class="fa fa-shield-check me-1"></i> Data Verification</button>
+          </li>
+        </ul>
+        <div class="tab-content" id="myTabContent">
+          <div class="tab-pane fade show active" id="tab-patients" role="tabpanel">
+            <ul class="list-group list-group-flush bg-transparent" id="modal-patient-list" style="max-height: 200px; overflow-y: auto;"></ul>
+          </div>
+          <div class="tab-pane fade" id="tab-staff" role="tabpanel">
+            <ul class="list-group list-group-flush bg-transparent" id="modal-staff-list" style="max-height: 200px; overflow-y: auto;"></ul>
+          </div>
+          <div class="tab-pane fade" id="tab-emergencies" role="tabpanel">
+            <ul class="list-group list-group-flush bg-transparent" id="modal-emergency-list" style="max-height: 200px; overflow-y: auto;"></ul>
+          </div>
+          <div class="tab-pane fade p-2" id="tab-verify-admin" role="tabpanel">
+            <div class="row g-2">
+              <div class="col-md-6 border-end border-secondary pe-2">
+                <h6 class="text-cyan small"><i class="fa fa-check-circle me-1"></i> Verify Specialty / Service</h6>
+                <div class="mb-2">
+                  <input type="text" id="admin-verify-specialty" class="form-control form-control-sm bg-dark text-white" placeholder="Specialty (e.g. Cardiology)">
+                </div>
+                <div class="mb-2">
+                  <input type="text" id="admin-verify-service" class="form-control form-control-sm bg-dark text-white" placeholder="Service (e.g. 24/7 ICU)">
+                </div>
+                <button type="button" class="btn btn-sm btn-cyan w-100" onclick="submitAdminVerification()">Verify & Mark Source as Admin</button>
+              </div>
+              <div class="col-md-6 ps-2">
+                <h6 class="text-cyan small"><i class="fa fa-user-doctor me-1"></i> Add Doctor Profile</h6>
+                <div class="mb-1"><input type="text" id="admin-doc-name" class="form-control form-control-sm bg-dark text-white" placeholder="Doctor Name (e.g. Dr. K. Raman)"></div>
+                <div class="mb-1"><input type="text" id="admin-doc-spec" class="form-control form-control-sm bg-dark text-white" placeholder="Specialty (e.g. Cardiology)"></div>
+                <div class="mb-1"><input type="text" id="admin-doc-qual" class="form-control form-control-sm bg-dark text-white" placeholder="Qualification (e.g. MD, DM)"></div>
+                <button type="button" class="btn btn-sm btn-outline-info w-100 mt-1" onclick="submitAdminDoctor()">Add Verified Doctor</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let charts = {};
+    let currentHospitals = [];
+
+    function initCharts() {
+        // Charts removed per user request
+    }
+
+    function fetchAnalytics() {
+        fetch('/api/admin/analytics')
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) {
+                    console.error("API Error:", data.error);
+                    return;
+                }
+                const timeEl = document.getElementById('last-updated');
+                if (timeEl) timeEl.innerText = new Date().toLocaleTimeString();
+            })
+            .catch(err => console.error("Failed to fetch analytics", err));
+    }
+
+    function fetchHospitalsList() {
+        fetch('/api/admin/hospitals')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    currentHospitals = data.hospitals;
+                    allHospitals = data.hospitals;
+                    renderHospitalsTable(data.hospitals);
+                }
+            });
+    }
+
+    let selectedAdminHospitalId = null;
+
+    function openHospitalDetails(hospitalId) {
+        selectedAdminHospitalId = hospitalId;
+        fetch(`/api/admin/hospitals/${hospitalId}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    const h = data.hospital;
+                    document.getElementById('modal-hosp-name').innerText = h.name;
+                    document.getElementById('modal-hosp-patients').innerText = h.total_patients;
+                    document.getElementById('modal-hosp-staff').innerText = h.total_staff;
+                    document.getElementById('modal-hosp-doctors').innerText = h.doctors;
+                    document.getElementById('modal-hosp-amb').innerText = h.ambulances;
+                    
+                    // Populate Patients
+                    const pList = document.getElementById('modal-patient-list');
+                    pList.innerHTML = h.patients_list.length ? h.patients_list.map(p => `<li class="list-group-item bg-transparent text-white border-secondary"><i class="fa fa-user me-2"></i>${p.name} <span class="badge bg-info float-end">${p.status}</span></li>`).join('') : '<li class="list-group-item bg-transparent text-muted border-secondary">No patients found.</li>';
+                    
+                    // Populate Staff
+                    const sList = document.getElementById('modal-staff-list');
+                    sList.innerHTML = h.staff_list.length ? h.staff_list.map(s => `<li class="list-group-item bg-transparent text-white border-secondary"><i class="fa fa-user-doctor me-2"></i>${s.name} <span class="badge bg-secondary float-end">${s.role}</span></li>`).join('') : '<li class="list-group-item bg-transparent text-muted border-secondary">No staff found.</li>';
+                    
+                    // Populate Emergencies
+                    const eList = document.getElementById('modal-emergency-list');
+                    eList.innerHTML = h.recent_emergencies.length ? h.recent_emergencies.map(e => `<li class="list-group-item bg-transparent text-white border-secondary"><i class="fa fa-warning text-warning me-2"></i>${e.type} <span class="badge bg-danger float-end">${e.severity}</span></li>`).join('') : '<li class="list-group-item bg-transparent text-muted border-secondary">No recent emergencies.</li>';
+
+                    const modal = new bootstrap.Modal(document.getElementById('hospitalDetailsModal'));
+                    modal.show();
+                }
+            });
+    }
+
+    function submitAdminVerification() {
+        if (!selectedAdminHospitalId) return;
+        const specialty = document.getElementById('admin-verify-specialty').value.trim();
+        const service = document.getElementById('admin-verify-service').value.trim();
+
+        fetch('/api/admin/hospitals/verify', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                hospital_id: selectedAdminHospitalId,
+                specialty: specialty,
+                service: service,
+                emergency_available: 1
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            alert(data.message || data.error);
+            document.getElementById('admin-verify-specialty').value = '';
+            document.getElementById('admin-verify-service').value = '';
+        });
+    }
+
+    function submitAdminDoctor() {
+        if (!selectedAdminHospitalId) return;
+        const name = document.getElementById('admin-doc-name').value.trim();
+        const spec = document.getElementById('admin-doc-spec').value.trim();
+        const qual = document.getElementById('admin-doc-qual').value.trim();
+
+        if (!name || !spec) {
+            alert("Doctor Name and Specialty are required.");
+            return;
+        }
+
+        fetch('/api/admin/doctors/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                hospital_id: selectedAdminHospitalId,
+                name: name,
+                specialty: spec,
+                qualification: qual
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            alert(data.message || data.error);
+            document.getElementById('admin-doc-name').value = '';
+            document.getElementById('admin-doc-spec').value = '';
+            document.getElementById('admin-doc-qual').value = '';
+        });
+    }
+
+    function updateChart(chart, labels, data) {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = data;
+        chart.update();
+    }
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            const btn = event.currentTarget;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                document.getElementById('reg-hosp-lat').value = lat;
+                document.getElementById('reg-hosp-lon').value = lon;
+                
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                    const data = await res.json();
+                    if (data && data.display_name) {
+                        document.getElementById('reg-hosp-address').value = data.display_name;
+                    }
+                } catch(e) {
+                    console.log("Geocoding failed", e);
+                }
+                btn.innerHTML = originalHtml;
+            }, (error) => {
+                btn.innerHTML = originalHtml;
+                alert("Geolocation failed: " + error.message);
+            });
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+
+    let allHospitals = [];
+
+    function filterHospitalsTable() {
+        const q = (document.getElementById('hosp-search-input').value || '').toLowerCase();
+        const filtered = allHospitals.filter(h => (
+            (h.name || '').toLowerCase().includes(q) ||
+            (h.hospital_id_code || '').toLowerCase().includes(q) ||
+            (h.phone || '').includes(q) ||
+            (h.district || '').toLowerCase().includes(q)
+        ));
+        renderHospitalsTable(filtered);
+    }
+
+    function renderHospitalsTable(hospitals) {
+        const tbody = document.getElementById('hospitals-table-body');
+        tbody.innerHTML = '';
+        if (!hospitals.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">No hospitals found.</td></tr>`;
+            return;
+        }
+        hospitals.forEach(h => {
+            const statusBadge = h.status === 'ACTIVE'
+                ? `<span class="badge bg-success">ACTIVE</span>`
+                : `<span class="badge bg-danger">INACTIVE</span>`;
+            const deactivateLabel = h.status === 'ACTIVE' ? 'Deactivate' : 'Activate';
+            const deactivateClass = h.status === 'ACTIVE' ? 'btn-outline-warning' : 'btn-outline-success';
+            tbody.innerHTML += `
+                <tr>
+                    <td><span class="badge bg-dark border border-cyan text-cyan">${h.hospital_id_code || '—'}</span></td>
+                    <td><i class="fa fa-hospital text-cyan me-1"></i>${h.name}</td>
+                    <td>${h.phone || '—'}</td>
+                    <td>${h.city || h.district || '—'}</td>
+                    <td><small>${h.available_beds || 0} ER / ${h.icu_beds || 0} ICU</small></td>
+                    <td>${statusBadge}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-info me-1" onclick="openHospitalDetails(${h.id})" title="View"><i class="fa fa-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="openEditHospital(${h.id})" title="Edit"><i class="fa fa-pen"></i></button>
+                        <button class="btn btn-sm ${deactivateClass} me-1" onclick="toggleHospitalStatus(${h.id}, '${h.status}')" title="${deactivateLabel}"><i class="fa fa-ban"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAdminEntity('hospital', ${h.id}, '${h.name}')" title="Delete"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function registerHospital() {
+        const btn = document.getElementById('reg-hosp-submit-btn');
+        const alertEl = document.getElementById('hosp-reg-alert');
+        alertEl.className = 'alert d-none mb-3';
+
+        const name = document.getElementById('reg-hosp-name').value.trim();
+        const hospital_type = document.getElementById('reg-hosp-type').value;
+        const phone = document.getElementById('reg-hosp-phone').value.trim();
+        const email = document.getElementById('reg-hosp-email').value.trim();
+        const address = document.getElementById('reg-hosp-address').value.trim();
+        const city = document.getElementById('reg-hosp-city').value.trim();
+        const district = document.getElementById('reg-hosp-district').value.trim();
+        const state = document.getElementById('reg-hosp-state').value.trim();
+        const pincode = document.getElementById('reg-hosp-pincode').value.trim();
+        const available_beds = parseInt(document.getElementById('reg-hosp-beds').value) || 20;
+        const icu_beds = parseInt(document.getElementById('reg-hosp-icubeds').value) || 5;
+        const emergency_available = document.getElementById('reg-hosp-emergency').checked;
+        const icu_available = document.getElementById('reg-hosp-icu').checked;
+        const cardiology_available = document.getElementById('reg-hosp-cardio').checked;
+        const neurology_available = document.getElementById('reg-hosp-neuro').checked;
+        const ambulance_available = document.getElementById('reg-hosp-ambulance').checked;
+        const username = document.getElementById('reg-hosp-username').value.trim();
+        const password = document.getElementById('reg-hosp-password').value;
+        const emergency_notification_consent = document.getElementById('reg-hosp-emergency-consent').checked;
+        const lat = document.getElementById('reg-hosp-lat').value;
+        const lon = document.getElementById('reg-hosp-lon').value;
+
+        if (!name || !phone || !address || !username || !password || !pincode) {
+            alertEl.className = 'alert alert-danger mb-3';
+            alertEl.textContent = 'Please fill all required fields (Name, Phone, Address, Pincode, Username, Password).';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Registering...';
+
+        fetch('/api/admin/register_hospital', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name, hospital_type, phone, email, address, city, district, state, pincode,
+                available_beds, icu_beds, emergency_available, icu_available,
+                cardiology_available, neurology_available, ambulance_available,
+                username, password, emergency_notification_consent,
+                latitude: lat || null, longitude: lon || null
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-plus me-1"></i>Register Hospital';
+            if (data.success) {
+                alertEl.className = 'alert alert-success mb-3';
+                alertEl.innerHTML = `<i class="fa fa-check me-1"></i>${data.message} Hospital ID: <strong>${data.hospital_id_code}</strong>`;
+                document.getElementById('hospital-reg-form').reset();
+                document.getElementById('reg-hosp-city').value = 'Erode';
+                document.getElementById('reg-hosp-district').value = 'Erode';
+                document.getElementById('reg-hosp-state').value = 'Tamil Nadu';
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('registerHospitalModal'))?.hide();
+                    fetchHospitalsList();
+                    fetchAnalytics();
+                }, 2000);
+            } else {
+                alertEl.className = 'alert alert-danger mb-3';
+                alertEl.textContent = 'Error: ' + data.error;
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-plus me-1"></i>Register Hospital';
+            alertEl.className = 'alert alert-danger mb-3';
+            alertEl.textContent = 'Registration failed. Please check your connection.';
+        });
+    }
+
+    function openEditHospital(hospitalId) {
+        fetch(`/api/admin/hospitals/${hospitalId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) { alert('Error loading hospital data.'); return; }
+                const h = data.hospital;
+                document.getElementById('edit-hosp-id').value = h.id;
+                document.getElementById('edit-hosp-name').value = h.name || '';
+                document.getElementById('edit-hosp-type').value = h.hospital_type || 'Multi-Speciality';
+                document.getElementById('edit-hosp-phone').value = h.phone || '';
+                document.getElementById('edit-hosp-email').value = h.email || '';
+                document.getElementById('edit-hosp-address').value = h.address || '';
+                document.getElementById('edit-hosp-city').value = h.city || 'Erode';
+                document.getElementById('edit-hosp-district').value = h.district || 'Erode';
+                document.getElementById('edit-hosp-state').value = h.state || 'Tamil Nadu';
+                document.getElementById('edit-hosp-pincode').value = h.pincode || '';
+                document.getElementById('edit-hosp-beds').value = h.available_beds || 0;
+                document.getElementById('edit-hosp-icubeds').value = h.icu_beds || 0;
+                document.getElementById('edit-hosp-emergency').checked = !!h.emergency_available;
+                document.getElementById('edit-hosp-icu').checked = !!h.icu_available;
+                document.getElementById('edit-hosp-cardio').checked = !!h.cardiology_available;
+                document.getElementById('edit-hosp-neuro').checked = !!h.neurology_available;
+                document.getElementById('edit-hosp-ambulance').checked = !!h.ambulance_available;
+                document.getElementById('edit-hosp-status').value = (h.status || 'ACTIVE').toUpperCase();
+                document.getElementById('edit-hosp-password').value = '';
+                document.getElementById('edit-hosp-alert').className = 'alert d-none mb-3';
+                new bootstrap.Modal(document.getElementById('editHospitalModal')).show();
+            });
+    }
+
+    function submitEditHospital() {
+        const alertEl = document.getElementById('edit-hosp-alert');
+        const hospitalId = document.getElementById('edit-hosp-id').value;
+        const payload = {
+            name: document.getElementById('edit-hosp-name').value,
+            hospital_type: document.getElementById('edit-hosp-type').value,
+            phone: document.getElementById('edit-hosp-phone').value,
+            email: document.getElementById('edit-hosp-email').value,
+            address: document.getElementById('edit-hosp-address').value,
+            city: document.getElementById('edit-hosp-city').value,
+            district: document.getElementById('edit-hosp-district').value,
+            state: document.getElementById('edit-hosp-state').value,
+            pincode: document.getElementById('edit-hosp-pincode').value,
+            available_beds: parseInt(document.getElementById('edit-hosp-beds').value) || 0,
+            icu_beds: parseInt(document.getElementById('edit-hosp-icubeds').value) || 0,
+            emergency_available: document.getElementById('edit-hosp-emergency').checked,
+            icu_available: document.getElementById('edit-hosp-icu').checked,
+            cardiology_available: document.getElementById('edit-hosp-cardio').checked,
+            neurology_available: document.getElementById('edit-hosp-neuro').checked,
+            ambulance_available: document.getElementById('edit-hosp-ambulance').checked,
+            status: document.getElementById('edit-hosp-status').value,
+            password: document.getElementById('edit-hosp-password').value
+        };
+        fetch(`/api/admin/hospitals/${hospitalId}/edit`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                alertEl.className = 'alert alert-success mb-3';
+                alertEl.textContent = data.message;
+                fetchHospitalsList();
+                fetchAnalytics();
+                setTimeout(() => bootstrap.Modal.getInstance(document.getElementById('editHospitalModal'))?.hide(), 1200);
+            } else {
+                alertEl.className = 'alert alert-danger mb-3';
+                alertEl.textContent = 'Error: ' + data.error;
+            }
+        });
+    }
+
+    function toggleHospitalStatus(hospitalId, currentStatus) {
+        const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+        const confirmMsg = newStatus === 'INACTIVE'
+            ? 'Are you sure you want to DEACTIVATE this hospital?\n\nIt will be removed from active maps and login dropdown, but historical data will be preserved.'
+            : 'Reactivate this hospital? It will reappear on maps and the login dropdown.';
+        if (!confirm(confirmMsg)) return;
+        fetch(`/api/admin/hospitals/${hospitalId}/toggle-status`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ status: newStatus })
+        }).then(r => r.json()).then(data => {
+            alert(data.message || data.error);
+            fetchHospitalsList();
+            fetchAnalytics();
+        });
+    }
+
+    function requestOTP(purpose) {
+        const phone = document.getElementById('reg-hosp-phone').value.trim();
+        const msgDiv = document.getElementById('otp-status-msg');
+        if (!phone) {
+            alert('Please enter the hospital phone number first.');
+            return;
+        }
+        fetch('/api/otp/send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ phone, purpose })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                msgDiv.innerHTML = `<div class="alert alert-success mt-2 py-2 small"><i class="fa fa-circle-check me-1"></i> ${data.message} <strong>(OTP Simulation Code: ${data.otp_code})</strong></div>`;
+                document.getElementById('reg-hosp-otp').value = data.otp_code;
+            } else {
+                msgDiv.innerHTML = `<div class="alert alert-danger mt-2 py-2 small"><i class="fa fa-triangle-exclamation me-1"></i> ${data.message}</div>`;
+            }
+        });
+    }
+
+    function confirmOTP(purpose) {
+        const phone = document.getElementById('reg-hosp-phone').value.trim();
+        const otp_code = document.getElementById('reg-hosp-otp').value.trim();
+        const msgDiv = document.getElementById('otp-status-msg');
+        if (!phone || !otp_code) {
+            alert('Please enter phone number and OTP code.');
+            return;
+        }
+        fetch('/api/otp/verify', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ phone, otp_code, purpose })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                msgDiv.innerHTML = `<div class="alert alert-success mt-2 py-2 small"><i class="fa fa-shield-check me-1"></i> ✅ OTP Verified Successfully!</div>`;
+            } else {
+                msgDiv.innerHTML = `<div class="alert alert-danger mt-2 py-2 small"><i class="fa fa-circle-xmark me-1"></i> ${data.message}</div>`;
+            }
+        });
+    }
+
+        let globalDrivers = [];
+        let globalFamilies = [];
+        let globalAmbulances = [];
+        let globalStaff = [];
+
+        function showAdminModal(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            try {
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    let m = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el);
+                    m.show();
+                    return;
+                }
+            } catch(e) {}
+            if (typeof $ !== 'undefined' && $.fn && $.fn.modal) {
+                $(el).modal('show');
+            } else {
+                el.classList.add('show');
+                el.style.display = 'block';
+                el.removeAttribute('aria-hidden');
+            }
+        }
+
+        function hideAdminModal(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            try {
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    let m = bootstrap.Modal.getInstance(el);
+                    if (m) m.hide();
+                }
+            } catch(e) {}
+            if (typeof $ !== 'undefined' && $.fn && $.fn.modal) {
+                $(el).modal('hide');
+            } else {
+                el.classList.remove('show');
+                el.style.display = 'none';
+                el.setAttribute('aria-hidden', 'true');
+            }
+        }
+
+        function getEntityById(type, id) {
+            if (type === 'driver') return globalDrivers.find(d => d.id == id);
+            if (type === 'family') return globalFamilies.find(f => f.id == id);
+            if (type === 'ambulance') return globalAmbulances.find(a => a.id == id);
+            if (type === 'staff') return globalStaff.find(s => s.id == id);
+            if (type === 'hospital') return typeof allHospitals !== 'undefined' ? allHospitals.find(h => h.id == id) : null;
+            return null;
+        }
+
+        function viewAdminEntity(type, id) {
+            const obj = getEntityById(type, id);
+            if (!obj) {
+                alert("Entity details not found.");
+                return;
+            }
+            const code = obj.driver_id_code || obj.hospital_id_code || obj.family_id_code || obj.staff_id_code || obj.ambulance_driver_id_code || obj.id;
+            document.getElementById('view-modal-title').innerText = `${type.toUpperCase()} Details — ${code}`;
+            let html = `
+                <table class="table table-dark table-sm align-middle">
+                    <tr><th style="width:35%;">Entity Type</th><td><span class="badge bg-primary">${type.toUpperCase()}</span></td></tr>
+                    <tr><th>Unique ID</th><td><span class="badge bg-dark text-cyan border border-cyan">${code}</span></td></tr>
+                    <tr><th>Name</th><td><strong>${obj.name || obj.family_name || obj.driver_name || '--'}</strong></td></tr>
+                    <tr><th>Username</th><td><code>${obj.username || '--'}</code></td></tr>
+                    <tr><th>Phone</th><td>${obj.phone || '--'}</td></tr>
+                    <tr><th>Email</th><td>${obj.email || '--'}</td></tr>
+                    <tr><th>Status</th><td><span class="badge ${obj.status === 'ACTIVE' || obj.status === 'Available' || obj.status === 'AVAILABLE' ? 'bg-success' : 'bg-danger'}">${obj.status || 'ACTIVE'}</span></td></tr>
+                    ${obj.hospital_name ? `<tr><th>Hospital</th><td>${obj.hospital_name}</td></tr>` : ''}
+                    ${obj.vehicle_number ? `<tr><th>Vehicle No</th><td>${obj.vehicle_number}</td></tr>` : ''}
+                    ${obj.driver_name && type !== 'driver' ? `<tr><th>Linked Driver</th><td>${obj.driver_name}</td></tr>` : ''}
+                    ${obj.relation ? `<tr><th>Relationship</th><td>${obj.relation}</td></tr>` : ''}
+                    ${obj.staff_role ? `<tr><th>Staff Role</th><td>${obj.staff_role}</td></tr>` : ''}
+                </table>
+            `;
+            document.getElementById('view-modal-body').innerHTML = html;
+            showAdminModal('viewEntityModal');
+        }
+
+        function editAdminEntity(type, id) {
+            const obj = getEntityById(type, id);
+            if (!obj) {
+                alert("Record not found for editing.");
+                return;
+            }
+            document.getElementById('edit-entity-type').value = type;
+            document.getElementById('edit-entity-id').value = obj.id;
+            document.getElementById('edit-entity-name').value = obj.name || obj.family_name || obj.driver_name || '';
+            document.getElementById('edit-entity-phone').value = obj.phone || '';
+            document.getElementById('edit-entity-email').value = obj.email || '';
+            document.getElementById('edit-entity-username').value = obj.username || '';
+            document.getElementById('edit-entity-password').value = '';
+            document.getElementById('edit-entity-status').value = obj.status || 'ACTIVE';
+            showAdminModal('editEntityModal');
+        }
+
+        function saveAdminEntityEdit() {
+            const type = document.getElementById('edit-entity-type').value;
+            const id = document.getElementById('edit-entity-id').value;
+            const payload = {
+                entity_type: type,
+                entity_id: id,
+                name: document.getElementById('edit-entity-name').value,
+                phone: document.getElementById('edit-entity-phone').value,
+                email: document.getElementById('edit-entity-email').value,
+                username: document.getElementById('edit-entity-username').value,
+                password: document.getElementById('edit-entity-password').value,
+                status: document.getElementById('edit-entity-status').value
+            };
+            fetch('/api/admin/entity/edit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            }).then(r => r.json()).then(data => {
+                if(data.success) {
+                    alert(data.message);
+                    hideAdminModal('editEntityModal');
+                    refreshAllAdminLists();
+                } else {
+                    alert(data.error || 'Failed to update record');
+                }
+            }).catch(err => {
+                alert('Failed to save changes: ' + err);
+            });
+        }
+
+        function toggleAdminEntityActive(type, id, name) {
+            fetch('/api/admin/entity/toggle-active', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ entity_type: type, entity_id: id })
+            }).then(r => r.json()).then(data => {
+                if(data.success) {
+                    alert(`${name} status updated to ${data.new_status}`);
+                    refreshAllAdminLists();
+                } else {
+                    alert(data.error || 'Failed to toggle status');
+                }
+            });
+        }
+
+        function fetchDriversList() {
+            fetch('/api/admin/drivers')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        globalDrivers = data.drivers || [];
+                        renderDriversTable(globalDrivers);
+                    }
+                });
+        }
+
+        function renderDriversTable(drivers) {
+            const tbody = document.getElementById('drivers-table-body');
+            if (!tbody) return;
+            if (!drivers.length) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-3">No drivers found in database.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = drivers.map(d => `
+                <tr>
+                    <td><span class="badge bg-dark text-cyan border border-cyan">${d.driver_id_code || 'DRV-000001'}</span></td>
+                    <td><strong>${d.name || 'Unknown Driver'}</strong></td>
+                    <td><code>${d.username || '--'}</code></td>
+                    <td>${d.phone || '--'}</td>
+                    <td>${d.email || '--'}</td>
+                    <td>${d.age || '--'} / ${d.gender || '--'}</td>
+                    <td><span class="badge bg-secondary">${d.blood_group || 'O+'}</span></td>
+                    <td><span class="badge ${d.status === 'ACTIVE' ? 'bg-success' : 'bg-danger'}">${d.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-info me-1" onclick="viewAdminEntity('driver', ${d.id})" title="View Details"><i class="fa fa-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="editAdminEntity('driver', ${d.id})" title="Edit Details/Password"><i class="fa fa-pen"></i></button>
+                        <button class="btn btn-sm ${d.status === 'ACTIVE' ? 'btn-outline-secondary' : 'btn-outline-success'} me-1" onclick="toggleAdminEntityActive('driver', ${d.id}, '${d.name}')" title="Toggle Active"><i class="fa fa-power-off"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAdminEntity('driver', ${d.id}, '${d.name}')" title="Delete"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterDriversTable() {
+            const query = (document.getElementById('drv-search-input')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('drv-status-filter')?.value || 'ALL';
+            const filtered = globalDrivers.filter(d => {
+                const matchesQuery = (d.driver_id_code || '').toLowerCase().includes(query) || (d.name || '').toLowerCase().includes(query) || (d.username || '').toLowerCase().includes(query) || (d.phone || '').includes(query);
+                const matchesStatus = statusFilter === 'ALL' || d.status === statusFilter;
+                return matchesQuery && matchesStatus;
+            });
+            renderDriversTable(filtered);
+        }
+
+        function fetchFamiliesList() {
+            fetch('/api/admin/families')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        globalFamilies = data.families || [];
+                        renderFamiliesTable(globalFamilies);
+                    }
+                });
+        }
+
+        function renderFamiliesTable(families) {
+            const tbody = document.getElementById('families-table-body');
+            if (!tbody) return;
+            if (!families.length) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-3">No family members found in database.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = families.map(f => `
+                <tr>
+                    <td><span class="badge bg-dark text-warning border border-warning">${f.family_id_code || 'FAM-000001'}</span></td>
+                    <td><strong>${f.family_name || 'Family Member'}</strong></td>
+                    <td><code>${f.username || '--'}</code></td>
+                    <td><span class="badge bg-info text-dark">${f.relation || 'Relative'}</span></td>
+                    <td><span class="badge bg-dark text-cyan border border-cyan">${f.driver_id_code || 'DRV-000001'}</span></td>
+                    <td><strong>${f.driver_name || 'Linked Driver'}</strong></td>
+                    <td>${f.phone || '--'}</td>
+                    <td><span class="badge ${f.status === 'ACTIVE' ? 'bg-success' : 'bg-danger'}">${f.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-info me-1" onclick="viewAdminEntity('family', ${f.id})" title="View Details"><i class="fa fa-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="editAdminEntity('family', ${f.id})" title="Edit Details/Password"><i class="fa fa-pen"></i></button>
+                        <button class="btn btn-sm ${f.status === 'ACTIVE' ? 'btn-outline-secondary' : 'btn-outline-success'} me-1" onclick="toggleAdminEntityActive('family', ${f.id}, '${f.family_name}')" title="Toggle Active"><i class="fa fa-power-off"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAdminEntity('family', ${f.id}, '${f.family_name}')" title="Delete"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterFamiliesTable() {
+            const query = (document.getElementById('fam-search-input')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('fam-status-filter')?.value || 'ALL';
+            const filtered = globalFamilies.filter(f => {
+                const matchesQuery = (f.family_id_code || '').toLowerCase().includes(query) || (f.family_name || '').toLowerCase().includes(query) || (f.username || '').toLowerCase().includes(query) || (f.driver_name || '').toLowerCase().includes(query);
+                const matchesStatus = statusFilter === 'ALL' || f.status === statusFilter;
+                return matchesQuery && matchesStatus;
+            });
+            renderFamiliesTable(filtered);
+        }
+
+        function fetchAmbulancesList() {
+            fetch('/api/admin/ambulances')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        globalAmbulances = data.ambulances || [];
+                        renderAmbulancesTable(globalAmbulances);
+                    }
+                });
+        }
+
+        function renderAmbulancesTable(ambulances) {
+            const tbody = document.getElementById('ambulances-table-body');
+            if (!tbody) return;
+            if (!ambulances.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No ambulance drivers found in database.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = ambulances.map(a => `
+                <tr>
+                    <td><span class="badge bg-dark text-danger border border-danger">${a.ambulance_driver_id_code || 'AMB-000001'}</span></td>
+                    <td><strong>${a.driver_name || 'Ambulance Driver'}</strong></td>
+                    <td><code>${a.username || '--'}</code></td>
+                    <td><span class="badge bg-secondary font-monospace">${a.vehicle_number || '--'}</span></td>
+                    <td>${a.hospital_name || 'Independent Dispatch'}</td>
+                    <td>${a.phone || '--'}</td>
+                    <td><span class="badge ${a.status === 'AVAILABLE' ? 'bg-success' : (a.status === 'BUSY' ? 'bg-warning text-dark' : 'bg-danger')}">${a.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-info me-1" onclick="viewAdminEntity('ambulance', ${a.id})" title="View Details"><i class="fa fa-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="editAdminEntity('ambulance', ${a.id})" title="Edit Details/Password"><i class="fa fa-pen"></i></button>
+                        <button class="btn btn-sm ${a.status === 'AVAILABLE' ? 'btn-outline-secondary' : 'btn-outline-success'} me-1" onclick="toggleAdminEntityActive('ambulance', ${a.id}, '${a.driver_name}')" title="Toggle Active"><i class="fa fa-power-off"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAdminEntity('ambulance', ${a.id}, '${a.driver_name}')" title="Delete"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterAmbulancesTable() {
+            const query = (document.getElementById('amb-search-input')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('amb-status-filter')?.value || 'ALL';
+            const filtered = globalAmbulances.filter(a => {
+                const matchesQuery = (a.ambulance_driver_id_code || '').toLowerCase().includes(query) || (a.driver_name || '').toLowerCase().includes(query) || (a.username || '').toLowerCase().includes(query) || (a.vehicle_number || '').toLowerCase().includes(query);
+                const matchesStatus = statusFilter === 'ALL' || a.status === statusFilter;
+                return matchesQuery && matchesStatus;
+            });
+            renderAmbulancesTable(filtered);
+        }
+
+        function fetchStaffList() {
+            fetch('/api/admin/staff')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        globalStaff = data.staff || [];
+                        renderStaffTable(globalStaff);
+                    }
+                });
+        }
+
+        function renderStaffTable(staff) {
+            const tbody = document.getElementById('staff-table-body');
+            if (!tbody) return;
+            if (!staff.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No hospital staff found in database.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = staff.map(s => `
+                <tr>
+                    <td><span class="badge bg-dark text-success border border-success">${s.staff_id_code || 'STA-000001'}</span></td>
+                    <td><strong>${s.name || 'Staff Member'}</strong></td>
+                    <td><span class="badge bg-info text-dark">${(s.staff_role || 'Staff').toUpperCase()}</span></td>
+                    <td><code>${s.username || '--'}</code></td>
+                    <td>${s.hospital_name || 'General Hospital'}</td>
+                    <td>${s.phone || '--'}</td>
+                    <td><span class="badge ${s.status === 'ACTIVE' ? 'bg-success' : 'bg-danger'}">${s.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-info me-1" onclick="viewAdminEntity('staff', ${s.id})" title="View Details"><i class="fa fa-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="editAdminEntity('staff', ${s.id})" title="Edit Details/Password"><i class="fa fa-pen"></i></button>
+                        <button class="btn btn-sm ${s.status === 'ACTIVE' ? 'btn-outline-secondary' : 'btn-outline-success'} me-1" onclick="toggleAdminEntityActive('staff', ${s.id}, '${s.name}')" title="Toggle Active"><i class="fa fa-power-off"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAdminEntity('staff', ${s.id}, '${s.name}')" title="Delete"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterStaffTable() {
+            const query = (document.getElementById('stf-search-input')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('stf-status-filter')?.value || 'ALL';
+            const filtered = globalStaff.filter(s => {
+                const matchesQuery = (s.staff_id_code || '').toLowerCase().includes(query) || (s.name || '').toLowerCase().includes(query) || (s.username || '').toLowerCase().includes(query) || (s.phone || '').includes(query);
+                const matchesStatus = statusFilter === 'ALL' || s.status === statusFilter;
+                return matchesQuery && matchesStatus;
+            });
+            renderStaffTable(filtered);
+        }
+
+        function refreshAllAdminLists() {
+            fetchAnalytics();
+            fetchHospitalsList();
+            fetchDriversList();
+            fetchFamiliesList();
+            fetchAmbulancesList();
+            fetchStaffList();
+        }
+
+        function populateFamilyDriverDropdown() {
+            const select = document.getElementById('reg-fam-driver-dropdown');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Choose from Registered Drivers --</option>';
+            globalDrivers.forEach(d => {
+                const code = d.driver_id_code || `DRV-${String(d.id).padStart(6, '0')}`;
+                select.innerHTML += `<option value="${code}">${d.name} (${code})</option>`;
+            });
+        }
+
+        function populateAmbulanceHospitalDropdown() {
+            const select = document.getElementById('reg-amb-hospital');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Independent Dispatch Unit --</option>';
+            currentHospitals.forEach(h => {
+                select.innerHTML += `<option value="${h.id}">${h.name} (${h.hospital_id_code || 'HOS-' + String(h.id).padStart(6, '0')})</option>`;
+            });
+        }
+
+        let lastRegisteredData = null;
+
+        function showRegistrationSuccessModal(data) {
+            lastRegisteredData = data;
+            document.getElementById('succ-user-type').innerText = data.user_type || 'User';
+            document.getElementById('succ-generated-id').innerText = data.driver_id_code || data.family_id_code || data.ambulance_driver_id_code || 'ID-CREATED';
+            document.getElementById('succ-username').innerText = data.username || '--';
+            
+            const statusEl = document.getElementById('succ-status');
+            statusEl.innerText = data.status || 'ACTIVE';
+            statusEl.className = `badge ${data.status === 'AVAILABLE' || data.status === 'ACTIVE' ? 'bg-success' : 'bg-warning'}`;
+
+            const linkedRow = document.getElementById('succ-linked-row');
+            if (data.linked_driver) {
+                linkedRow.style.display = '';
+                document.getElementById('succ-linked-info').innerHTML = `<i class="fa fa-link text-warning me-1"></i> <strong>Linked Driver:</strong> ${data.linked_driver}`;
+            } else if (data.vehicle_number) {
+                linkedRow.style.display = '';
+                document.getElementById('succ-linked-info').innerHTML = `<i class="fa fa-car text-cyan me-1"></i> <strong>Vehicle Registration:</strong> ${data.vehicle_number}`;
+            } else {
+                linkedRow.style.display = 'none';
+            }
+
+            hideAdminModal('registerDriverModal');
+            hideAdminModal('registerFamilyModal');
+            hideAdminModal('registerAmbulanceModal');
+            showAdminModal('registrationSuccessModal');
+            refreshAllAdminLists();
+        }
+
+        function viewSuccessProfile() {
+            if (!lastRegisteredData) return;
+            const type = lastRegisteredData.user_type === 'Driver' ? 'driver' : (lastRegisteredData.user_type === 'Family Member' ? 'family' : 'ambulance');
+            const id = lastRegisteredData.driver_id || lastRegisteredData.family_id || lastRegisteredData.ambulance_id;
+            hideAdminModal('registrationSuccessModal');
+            if (id) {
+                viewAdminEntity(type, id);
+            }
+        }
+
+        function editSuccessRegistration() {
+            if (!lastRegisteredData) return;
+            const type = lastRegisteredData.user_type === 'Driver' ? 'driver' : (lastRegisteredData.user_type === 'Family Member' ? 'family' : 'ambulance');
+            const id = lastRegisteredData.driver_id || lastRegisteredData.family_id || lastRegisteredData.ambulance_id;
+            hideAdminModal('registrationSuccessModal');
+            if (id) {
+                editAdminEntity(type, id);
+            }
+        }
+
+        function searchDriversLive() {
+            const query = (document.getElementById('reg-fam-driverid')?.value || '').trim();
+            fetch(`/api/admin/search_drivers?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(data => {
+                    const badge = document.getElementById('linked-driver-badge');
+                    if (data.success && data.drivers && data.drivers.length > 0) {
+                        const d = data.drivers[0];
+                        document.getElementById('reg-fam-driverid').value = d.driver_id_code;
+                        badge.className = 'badge bg-success font-monospace';
+                        badge.innerHTML = `<i class="fa fa-check me-1"></i> LINKED: ${d.driver_id_code} - ${d.name}`;
+                    } else {
+                        badge.className = 'badge bg-danger font-monospace';
+                        badge.innerHTML = `<i class="fa fa-xmark me-1"></i> No Driver Found matching '${query}'`;
+                    }
+                });
+        }
+
+        function selectLinkedDriverPreview(code) {
+            const badge = document.getElementById('linked-driver-badge');
+            if (code) {
+                badge.className = 'badge bg-success font-monospace';
+                badge.innerHTML = `<i class="fa fa-check me-1"></i> LINKED: ${code}`;
+            } else {
+                badge.className = 'badge bg-secondary font-monospace';
+                badge.innerText = 'No Driver Selected';
+            }
+        }
+
+        function registerDriver() {
+            const btn = document.getElementById('reg-drv-submit-btn');
+            const alertEl = document.getElementById('drv-reg-alert');
+            alertEl.className = 'alert d-none mb-3';
+
+            const name = document.getElementById('reg-drv-name').value.trim();
+            const dob = document.getElementById('reg-drv-dob').value;
+            const gender = document.getElementById('reg-drv-gender').value;
+            const phone = document.getElementById('reg-drv-phone').value.trim();
+            const email = document.getElementById('reg-drv-email').value.trim();
+            const address = document.getElementById('reg-drv-address').value.trim();
+            const city = document.getElementById('reg-drv-city').value.trim();
+            const district = document.getElementById('reg-drv-district').value.trim();
+            const state = document.getElementById('reg-drv-state').value.trim();
+            const pincode = document.getElementById('reg-drv-pincode').value.trim();
+
+            const licence_number = document.getElementById('reg-drv-licence').value.trim();
+            const licence_expiry = document.getElementById('reg-drv-licence-expiry').value;
+            const vehicle_number = document.getElementById('reg-drv-vehicle').value.trim();
+            const vehicle_type = document.getElementById('reg-drv-vehicle-type').value;
+            const experience = document.getElementById('reg-drv-exp').value;
+            const organization = document.getElementById('reg-drv-org').value.trim();
+            const emergency_contact = document.getElementById('reg-drv-emg-phone').value.trim();
+
+            const blood_group = document.getElementById('reg-drv-blood').value;
+            const medical_conditions = document.getElementById('reg-drv-conditions').value.trim();
+            const medications = document.getElementById('reg-drv-meds').value.trim();
+            const allergies = document.getElementById('reg-drv-allergies').value.trim();
+            const cardiac_history = document.getElementById('reg-drv-cardiac').value.trim();
+            const emergency_notes = document.getElementById('reg-drv-notes').value.trim();
+            const preferred_language = document.getElementById('reg-drv-lang').value;
+
+            const username = document.getElementById('reg-drv-username').value.trim();
+            const password = document.getElementById('reg-drv-password').value;
+
+            if (!name || !phone || !licence_number || !vehicle_number || !username || !password) {
+                alertEl.className = 'alert alert-danger mb-3';
+                alertEl.textContent = 'Please fill all required fields (Full Name, Phone, Driving Licence, Vehicle Number, Username, Password).';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Registering Driver...';
+
+            const payload = {
+                name, dob, gender, phone, email, address, city, district, state, pincode,
+                licence_number, licence_expiry, vehicle_number, vehicle_type, experience, organization,
+                emergency_contact, blood_group, medical_conditions, medications, allergies, cardiac_history,
+                emergency_notes, preferred_language, username, password
+            };
+
+            fetch('/api/admin/register_driver', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-plus me-1"></i> Complete Driver Registration';
+                if (data.success) {
+                    document.getElementById('driver-reg-form').reset();
+                    showRegistrationSuccessModal(data);
+                } else {
+                    alertEl.className = 'alert alert-danger mb-3';
+                    alertEl.textContent = 'Error: ' + (data.error || 'Registration failed');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-plus me-1"></i> Complete Driver Registration';
+                alertEl.className = 'alert alert-danger mb-3';
+                alertEl.textContent = 'Registration failed. Please check network connection.';
+            });
+        }
+
+        function registerFamily() {
+            const btn = document.getElementById('reg-fam-submit-btn');
+            const alertEl = document.getElementById('fam-reg-alert');
+            alertEl.className = 'alert d-none mb-3';
+
+            const name = document.getElementById('reg-fam-name').value.trim();
+            const relation = document.getElementById('reg-fam-relation').value;
+            const dob = document.getElementById('reg-fam-dob').value;
+            const gender = document.getElementById('reg-fam-gender').value;
+            const phone = document.getElementById('reg-fam-phone').value.trim();
+            const email = document.getElementById('reg-fam-email').value.trim();
+            const address = document.getElementById('reg-fam-address').value.trim();
+            const city = document.getElementById('reg-fam-city').value.trim();
+            const district = document.getElementById('reg-fam-district').value.trim();
+            const state = document.getElementById('reg-fam-state').value.trim();
+            const pincode = document.getElementById('reg-fam-pincode').value.trim();
+
+            const driver_id = document.getElementById('reg-fam-driverid').value.trim();
+            const primary_emergency_contact = document.getElementById('reg-fam-primary-emg').value.trim();
+            const secondary_emergency_contact = document.getElementById('reg-fam-sec-emg').value.trim();
+            const notification_preferences = document.getElementById('reg-fam-pref').value;
+            const sms_enabled = document.getElementById('reg-fam-sms-consent').checked;
+            const alert_enabled = document.getElementById('reg-fam-alert-consent').checked;
+
+            const username = document.getElementById('reg-fam-username').value.trim();
+            const password = document.getElementById('reg-fam-password').value;
+
+            if (!name || !relation || !driver_id || !phone || !username || !password) {
+                alertEl.className = 'alert alert-danger mb-3';
+                alertEl.textContent = 'Please fill all required fields (Name, Relationship, Linked Driver ID, Phone, Username, Password).';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Registering Family Member...';
+
+            const payload = {
+                name, relation, dob, gender, phone, email, address, city, district, state, pincode,
+                driver_id, primary_emergency_contact, secondary_emergency_contact, notification_preferences,
+                sms_enabled, alert_enabled, username, password
+            };
+
+            fetch('/api/admin/register_family', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-plus me-1"></i> Complete Family Registration';
+                if (data.success) {
+                    document.getElementById('family-reg-form').reset();
+                    showRegistrationSuccessModal(data);
+                } else {
+                    alertEl.className = 'alert alert-danger mb-3';
+                    alertEl.textContent = 'Error: ' + (data.error || 'Registration failed');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-plus me-1"></i> Complete Family Registration';
+                alertEl.className = 'alert alert-danger mb-3';
+                alertEl.textContent = 'Registration failed. Please check network connection.';
+            });
+        }
+
+        function registerAmbulance() {
+            const btn = document.getElementById('reg-amb-submit-btn');
+            const alertEl = document.getElementById('amb-reg-alert');
+            alertEl.className = 'alert d-none mb-3';
+
+            const name = document.getElementById('reg-amb-name').value.trim();
+            const dob = document.getElementById('reg-amb-dob').value;
+            const gender = document.getElementById('reg-amb-gender').value;
+            const phone = document.getElementById('reg-amb-phone').value.trim();
+            const email = document.getElementById('reg-amb-email').value.trim();
+            const address = document.getElementById('reg-amb-address').value.trim();
+            const city = document.getElementById('reg-amb-city').value.trim();
+            const district = document.getElementById('reg-amb-district').value.trim();
+            const state = document.getElementById('reg-amb-state').value.trim();
+            const pincode = document.getElementById('reg-amb-pincode').value.trim();
+
+            const licence_number = document.getElementById('reg-amb-licence').value.trim();
+            const licence_expiry = document.getElementById('reg-amb-licence-expiry').value;
+            const experience = document.getElementById('reg-amb-exp').value;
+
+            const vehicle_number = document.getElementById('reg-amb-vehicle').value.trim();
+            const ambulance_type = document.getElementById('reg-amb-type').value;
+            const service_provider = document.getElementById('reg-amb-provider').value.trim();
+            const organization = document.getElementById('reg-amb-org').value.trim();
+            const hospital_id = document.getElementById('reg-amb-hospital').value;
+            const organization_address = document.getElementById('reg-amb-org-addr').value.trim();
+            const emergency_contact = document.getElementById('reg-amb-emg-phone').value.trim();
+
+            const selectedCapabilities = [];
+            document.querySelectorAll('.amb-capability-cb:checked').forEach(cb => selectedCapabilities.push(cb.value));
+
+            const availability = document.getElementById('reg-amb-availability').value;
+            const latitude = parseFloat(document.getElementById('reg-amb-lat').value) || 11.3410;
+            const longitude = parseFloat(document.getElementById('reg-amb-lng').value) || 77.7170;
+
+            const username = document.getElementById('reg-amb-username').value.trim();
+            const password = document.getElementById('reg-amb-password').value;
+
+            if (!name || !phone || !licence_number || !vehicle_number || !username || !password) {
+                alertEl.className = 'alert alert-danger mb-3';
+                alertEl.textContent = 'Please fill all required fields (Driver Name, Phone, Licence, Vehicle Registration, Username, Password).';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Registering Ambulance...';
+
+            const payload = {
+                name, dob, gender, phone, email, address, city, district, state, pincode,
+                licence_number, licence_expiry, experience, vehicle_number, ambulance_type,
+                service_provider, organization, hospital_id, organization_address, emergency_contact,
+                capabilities: selectedCapabilities, availability, latitude, longitude, username, password
+            };
+
+            fetch('/api/admin/register_ambulance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-plus me-1"></i> Complete Ambulance Registration';
+                if (data.success) {
+                    document.getElementById('ambulance-reg-form').reset();
+                    showRegistrationSuccessModal(data);
+                } else {
+                    alertEl.className = 'alert alert-danger mb-3';
+                    alertEl.textContent = 'Error: ' + (data.error || 'Registration failed');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-plus me-1"></i> Complete Ambulance Registration';
+                alertEl.className = 'alert alert-danger mb-3';
+                alertEl.textContent = 'Registration failed. Please check network connection.';
+            });
+        }
+
+        function deleteAdminEntity(type, id, name, force = false) {
+            if (!confirm(`Are you sure you want to PERMANENTLY DELETE ${type.toUpperCase()} '${name}'?\n\nThis will remove the user account and revoke access.`)) return;
+            fetch('/api/admin/entity/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ entity_type: type, entity_id: id, force: force })
+            }).then(r => r.json()).then(data => {
+                if (data.warning) {
+                    if (confirm(`WARNING: ${data.message}`)) {
+                        deleteAdminEntity(type, id, name, true);
+                    }
+                } else if (data.success) {
+                    alert(data.message);
+                    refreshAllAdminLists();
+                } else {
+                    alert('Error deleting entity: ' + data.error);
+                }
+            });
+        }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initCharts();
+        refreshAllAdminLists();
+
+        // Refresh every 30 seconds
+        setInterval(() => {
+            refreshAllAdminLists();
+        }, 30000);
+    });
+
+</script>
+{% endblock %}
+
+

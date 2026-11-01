@@ -1,0 +1,744 @@
+{% extends "base.html" %}
+
+{% block page_title %}Family Guardian Portal — Loved One Emergency Protection{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root {
+    --fam-cyan: #06b6d4;
+    --fam-emerald: #10b981;
+    --fam-rose: #f43f5e;
+    --fam-amber: #f59e0b;
+    --fam-indigo: #6366f1;
+    --fam-card-bg: rgba(15, 23, 42, 0.8);
+    --fam-card-border: rgba(255, 255, 255, 0.12);
+}
+
+.family-hero-card {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(6, 182, 212, 0.12) 100%);
+    border: 1px solid var(--fam-card-border);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(16px);
+    position: relative;
+    overflow: hidden;
+}
+
+.family-hero-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: {% if emergency and emergency.status|upper not in ['COMPLETED', 'RESOLVED', 'CANCELLED'] %}linear-gradient(90deg, #f43f5e, #ef4444, #f59e0b){% else %}linear-gradient(90deg, #10b981, #06b6d4, #3b82f6){% endif %};
+}
+
+.glow-pill-safe {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+.glow-pill-alert {
+    background: rgba(244, 63, 94, 0.2);
+    color: #fb7185;
+    border: 1px solid rgba(244, 63, 94, 0.5);
+    box-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
+    animation: pulseGlow 1.8s infinite;
+}
+
+@keyframes pulseGlow {
+    0% { box-shadow: 0 0 10px rgba(244, 63, 94, 0.3); }
+    50% { box-shadow: 0 0 25px rgba(244, 63, 94, 0.7); }
+    100% { box-shadow: 0 0 10px rgba(244, 63, 94, 0.3); }
+}
+
+.family-glass-card {
+    background: var(--fam-card-bg);
+    border: 1px solid var(--fam-card-border);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(12px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.family-glass-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 36px rgba(6, 182, 212, 0.15);
+}
+
+.driver-avatar-circle {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.3));
+    border: 2px solid var(--fam-cyan);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: var(--fam-cyan);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+}
+
+.vital-metric-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+}
+
+.vital-metric-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.timeline-stepper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    padding: 20px 0;
+    margin-bottom: 20px;
+}
+
+.timeline-stepper::before {
+    content: '';
+    position: absolute;
+    top: 38px;
+    left: 20px;
+    right: 20px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 0;
+}
+
+.stepper-node {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stepper-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #0f172a;
+    border: 2px solid #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 1rem;
+    transition: all 0.4s ease;
+}
+
+.stepper-node.active .stepper-icon {
+    border-color: var(--fam-cyan);
+    color: var(--fam-cyan);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
+}
+
+.stepper-node.completed .stepper-icon {
+    background: #10b981;
+    border-color: #10b981;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+}
+
+.stepper-label {
+    margin-top: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.btn-contact {
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s;
+}
+
+.btn-contact-cyan { background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.4); }
+.btn-contact-cyan:hover { background: #06b6d4; color: #fff; box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+
+.btn-contact-emerald { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+.btn-contact-emerald:hover { background: #10b981; color: #fff; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+
+/* Google Maps Navigate Button */
+.btn-navigate-gmaps {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 22px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+    cursor: pointer;
+    text-decoration: none;
+}
+.btn-navigate-gmaps:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 6px 28px rgba(16, 185, 129, 0.5);
+    color: #fff;
+    transform: translateY(-1px);
+}
+.btn-navigate-gmaps:disabled, .btn-navigate-gmaps.loading {
+    background: rgba(16, 185, 129, 0.3);
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.hospital-admitted-banner {
+    background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(6,182,212,0.08));
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+}
+
+.location-status-bar {
+    background: rgba(15,23,42,0.6);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- 1. HERO GUARDIAN HEADER -->
+    <div class="family-hero-card mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="driver-avatar-circle">
+                    <i class="fa fa-user-shield"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge rounded-pill px-3 py-1 font-monospace fs-6 {% if emergency and emergency.status|upper not in ['COMPLETED', 'RESOLVED', 'CANCELLED'] %}glow-pill-alert{% else %}glow-pill-safe{% endif %}">
+                            <i class="fa {% if emergency and emergency.status|upper not in ['COMPLETED', 'RESOLVED', 'CANCELLED'] %}fa-triangle-exclamation{% else %}fa-shield-heart{% endif %} me-1"></i>
+                            {% if emergency and emergency.status|upper not in ['COMPLETED', 'RESOLVED', 'CANCELLED'] %}
+                                CRITICAL EMERGENCY DISPATCH ACTIVE
+                            {% else %}
+                                LOVED ONE IS SAFE & PROTECTED
+                            {% endif %}
+                        </span>
+                    </div>
+                    <h2 class="text-white fw-bold mb-1">
+                        {{ driver.name if driver else (family.name if family else 'Linked Loved One') }}
+                    </h2>
+                    <p class="text-secondary small mb-0">
+                        <span class="badge bg-dark border border-cyan text-cyan font-monospace me-2">{{ driver.driver_id_code if (driver and driver.driver_id_code) else (family.driver_id_code if family else 'DRV-000101') }}</span>
+                        Linked Family Guardian Portal &nbsp;|&nbsp; Relative: <strong class="text-white">{{ family.name if family else session.get('name', 'Family Member') }}</strong> ({{ family.relation if family and family.relation else 'Family' }})
+                    </p>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-warning btn-sm px-3 py-2 fw-semibold rounded-3" data-bs-toggle="modal" data-bs-target="#profileModal">
+                    <i class="fa fa-user-gear me-1"></i> Edit Profile
+                </button>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm px-3 py-2 fw-semibold rounded-3">
+                    <i class="fa fa-power-off me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN DASHBOARD CONTENT GRID -->
+    <div class="row g-4 mb-4">
+        <!-- LEFT COLUMN: LOVED ONE PROFILE & LIVE TELEMETRY -->
+        <div class="col-lg-4">
+            <!-- LOVED ONE IDENTITY CARD -->
+            <div class="family-glass-card mb-4">
+                <h5 class="text-cyan fw-bold mb-3 d-flex align-items-center justify-content-between">
+                    <span><i class="fa fa-address-card me-2"></i>LOVED ONE PROFILE</span>
+                    <span class="badge bg-secondary font-monospace">{{ driver.blood_group|default('O+') }} Blood</span>
+                </h5>
+
+                <div class="row g-2 mb-3 text-sm">
+                    <div class="col-6">
+                        <span class="text-secondary small d-block">Age / Gender</span>
+                        <strong class="text-white fs-6">{{ driver.age|default(28) }} Yrs / {{ driver.gender|default('Male') }}</strong>
+                    </div>
+                    <div class="col-6">
+                        <span class="text-secondary small d-block">Contact Phone</span>
+                        <strong class="text-cyan fs-6">{{ driver.phone|default('9943064577') }}</strong>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <span class="text-secondary small d-block">Vehicle Registration Number</span>
+                        <span class="badge bg-dark border border-secondary text-white font-monospace fs-6 px-3 py-1">{{ driver.vehicle_number|default('TN-88-FC-2022') }}</span>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <span class="text-secondary small d-block">Residence Address</span>
+                        <span class="text-white-50 small">{{ driver.address|default('Perundurai, Erode, Tamil Nadu') }}</span>
+                    </div>
+                </div>
+
+                {% if driver and driver.phone %}
+                <a href="tel:{{ driver.phone }}" class="btn btn-contact btn-contact-cyan w-100 text-center">
+                    <i class="fa fa-phone me-1"></i> Call Loved One Directly
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- LIVE VITALS & RISK TELEMETRY -->
+            <div class="family-glass-card">
+                <h5 class="text-warning fw-bold mb-3">
+                    <i class="fa fa-heart-pulse me-2"></i>LATEST SENSOR TELEMETRY
+                </h5>
+
+                {% set em_vitals = emergency if emergency else health_log %}
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="vital-metric-card">
+                            <span class="text-secondary small d-block">Heart Rate</span>
+                            <span class="vital-metric-val text-rose">{{ em_vitals.heart_rate|default(145)|round|int if em_vitals else 145 }}</span> <small class="text-secondary">bpm</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="vital-metric-card">
+                            <span class="text-secondary small d-block">Oxygen (SpO₂)</span>
+                            <span class="vital-metric-val text-cyan">{{ em_vitals.spo2|default(82)|round|int if em_vitals else 82 }}</span> <small class="text-secondary">%</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="vital-metric-card">
+                            <span class="text-secondary small d-block">Blood Pressure</span>
+                            <span class="vital-metric-val text-warning">{{ em_vitals.blood_pressure|default('180/110') if em_vitals else '180/110' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="vital-metric-card">
+                            <span class="text-secondary small d-block">Body Temp</span>
+                            <span class="vital-metric-val text-emerald">{{ em_vitals.temperature|default(38.5)|round(1) if em_vitals else 38.5 }}</span> <small class="text-secondary">°C</small>
+                        </div>
+                    </div>
+                </div>
+
+                {% if emergency %}
+                <div class="p-3 rounded-3 bg-dark border border-danger">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge bg-danger px-2 py-1">{{ emergency.severity|default('CRITICAL') }}</span>
+                        <strong class="text-danger font-monospace fs-6">
+                            {% set r_val = emergency.risk_percentage if emergency.risk_percentage is defined and emergency.risk_percentage else 95.0 %}
+                            {{ r_val|round(1) }}% Risk Score
+                        </strong>
+                    </div>
+                    <h6 class="text-white fw-bold mb-1">{{ emergency.prediction }}</h6>
+                    <p class="text-secondary small mb-0">{{ emergency.explanation }}</p>
+                </div>
+                {% else %}
+                <div class="p-3 rounded-3 bg-dark border border-success text-center">
+                    <i class="fa fa-circle-check text-success fs-3 mb-2"></i>
+                    <h6 class="text-white mb-0">Normal Telemetry Status</h6>
+                    <span class="text-secondary small">No abnormal vital spikes detected</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: LOGISTICS SEQUENCE & LIVE MAP DISPATCH COMMAND CENTER -->
+        <div class="col-lg-8">
+            <!-- LOGISTICS SEQUENCE TIMELINE STEPPER -->
+            <div class="family-glass-card mb-4">
+                <h5 class="text-cyan fw-bold mb-3">
+                    <i class="fa fa-route me-2"></i>EMERGENCY DISPATCH & DISCOVERY SEQUENCE
+                </h5>
+
+                <div class="timeline-stepper">
+                    <div class="stepper-node {% if emergency %}completed{% endif %}">
+                        <div class="stepper-icon"><i class="fa fa-file-medical"></i></div>
+                        <div class="stepper-label">Vitals Logged</div>
+                    </div>
+                    <div class="stepper-node {% if emergency %}completed{% endif %}">
+                        <div class="stepper-icon"><i class="fa fa-microchip"></i></div>
+                        <div class="stepper-label">AI Diagnostic</div>
+                    </div>
+                    <div class="stepper-node {% if emergency and emergency.hospital_id %}completed{% endif %}">
+                        <div class="stepper-icon"><i class="fa fa-hospital"></i></div>
+                        <div class="stepper-label">Hospital Match</div>
+                    </div>
+                    <div class="stepper-node {% if emergency and emergency.accepted_hospital_id %}completed{% elif emergency and emergency.hospital_id %}active{% endif %}">
+                        <div class="stepper-icon"><i class="fa fa-check-double"></i></div>
+                        <div class="stepper-label">Hospital Accept</div>
+                    </div>
+                    <div class="stepper-node {% if emergency and emergency.accepted_ambulance_id %}completed{% elif emergency and emergency.ambulance_id %}active{% endif %}">
+                        <div class="stepper-icon"><i class="fa fa-truck-medical"></i></div>
+                        <div class="stepper-label">Ambulance Dispatched</div>
+                    </div>
+                    <div class="stepper-node {% if emergency and emergency.status|upper in ['RESOLVED', 'COMPLETED', 'TREATED'] %}completed{% endif %}">
+                        <div class="stepper-icon"><i class="fa fa-circle-check"></i></div>
+                        <div class="stepper-label">Handover Complete</div>
+                    </div>
+                </div>
+
+                {% if timeline %}
+                <div class="mt-3">
+                    <h6 class="text-white-50 small fw-bold mb-2">TIMELINE INCIDENT FEED</h6>
+                    <div class="d-flex flex-column gap-1 border-start border-secondary ps-3 ms-1 text-sm">
+                        {% for step in timeline %}
+                        <div>
+                            <span class="badge bg-dark border border-secondary text-cyan font-monospace me-1">{{ step.timestamp }}</span>
+                            <strong class="text-white me-1">{{ step.step }}:</strong>
+                            <span class="text-secondary">{{ step.detail }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- LIVE DISPATCH & MAP CARD -->
+            <div class="family-glass-card mb-4">
+                <h5 class="text-white fw-bold mb-3 d-flex align-items-center justify-content-between">
+                    <span><i class="fa fa-map-location-dot text-cyan me-2"></i>LIVE PATIENT & HOSPITAL DISPATCH MAP</span>
+                    {% if emergency %}
+                    <span class="badge bg-danger px-3 py-1">LIVE TELEMETRY TRACKING</span>
+                    {% endif %}
+                </h5>
+
+                <div id="map" style="border-radius:14px; min-height:360px; border:1px solid var(--fam-card-border);" class="mb-3"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-dark border border-secondary h-100">
+                            <span class="text-secondary small d-block mb-1"><i class="fa fa-hospital text-emerald me-1"></i> Destination Hospital</span>
+                            <strong class="text-white fs-6 d-block">{{ emergency.hospital_name|default('Government Medical College Hospital, Perundurai') if emergency else 'Matching Emergency Hospital...' }}</strong>
+                            <span class="text-secondary small d-block">{{ emergency.hospital_address|default('Poondurai Road, Erode') if emergency else 'Erode Region' }}</span>
+                            {% if emergency and emergency.hospital_phone %}
+                            <a href="tel:{{ emergency.hospital_phone }}" class="btn btn-contact btn-contact-emerald btn-sm mt-2 w-100 text-center">
+                                <i class="fa fa-phone me-1"></i> Call Hospital ER: {{ emergency.hospital_phone }}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-dark border border-secondary h-100">
+                            <span class="text-secondary small d-block mb-1"><i class="fa fa-ambulance text-cyan me-1"></i> Dispatched Ambulance Unit</span>
+                            <strong class="text-white fs-6 d-block">{{ emergency.ambulance_vehicle_number|default('TN-88-FC-2022') if emergency else 'Searching Fleet...' }}</strong>
+                            <span class="text-secondary small d-block">Driver: {{ emergency.ambulance_driver_name|default('SANTHOSH S') if emergency else 'Assigned Unit' }}</span>
+                            {% if emergency and emergency.ambulance_driver_phone %}
+                            <a href="tel:{{ emergency.ambulance_driver_phone }}" class="btn btn-contact btn-contact-cyan btn-sm mt-2 w-100 text-center">
+                                <i class="fa fa-phone me-1"></i> Call Ambulance Driver: {{ emergency.ambulance_driver_phone }}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== GOOGLE MAPS NAVIGATION ROUTE ===== -->
+                <div class="mt-3">
+                    {% if emergency %}
+                    <!-- Hospital Admitted Banner -->
+                    <div class="hospital-admitted-banner">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fa fa-hospital text-emerald"></i>
+                            <span class="text-secondary small fw-semibold text-uppercase" style="letter-spacing:0.05em;">Loved One Admitted At</span>
+                            <span class="badge bg-dark font-monospace ms-auto" style="border:1px solid rgba(6,182,212,0.4);color:#22d3ee;">
+                                {{ emergency.emergency_code or ('EMG-%06d' % emergency.id) }}
+                            </span>
+                        </div>
+                        <div class="fw-bold text-white fs-6">
+                            <i class="fa fa-map-pin text-rose me-1"></i>
+                            {{ emergency.hospital_name or 'Government Medical College Hospital, Perundurai' }}
+                        </div>
+                        {% if emergency.hospital_address %}
+                        <div class="text-secondary small mt-1">{{ emergency.hospital_address }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Navigate from YOUR current location to hospital -->
+                    <button class="btn-navigate-gmaps" id="family-navigate-btn" onclick="navigateToAdmittedHospital()">
+                        <i class="fa fa-diamond-turn-right" style="font-size:1.2rem;"></i>
+                        <span id="nav-btn-text">Navigate to Hospital (My Location → Hospital)</span>
+                    </button>
+                    <div class="location-status-bar" id="location-status">
+                        <i class="fa fa-location-crosshairs" id="loc-icon"></i>
+                        <span id="loc-status-text">Tap to get your current GPS location &amp; open Google Maps Navigation</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- INCIDENT HISTORY LOGS TABLE -->
+            {% if incident_history %}
+            <div class="family-glass-card">
+                <h5 class="text-white fw-bold mb-3">
+                    <i class="fa fa-history text-cyan me-2"></i>PAST INCIDENT HISTORY LOGS
+                </h5>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0 small">
+                        <thead>
+                            <tr class="text-secondary text-uppercase">
+                                <th>Incident ID</th>
+                                <th>Timestamp</th>
+                                <th>Condition</th>
+                                <th>Severity</th>
+                                <th>Hospital</th>
+                                <th class="text-end">Medical Report</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inc in incident_history %}
+                            <tr>
+                                <td><span class="badge bg-dark border border-cyan text-cyan font-monospace">{{ inc.emergency_code|default('EMG-000001') }}</span></td>
+                                <td class="text-white-50">{{ inc.timestamp }}</td>
+                                <td class="fw-bold text-white">{{ inc.prediction }}</td>
+                                <td>
+                                    <span class="badge {% if inc.severity|upper == 'CRITICAL' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                        {{ inc.severity }}
+                                    </span>
+                                </td>
+                                <td class="text-secondary">{{ inc.hospital_name|default('Lotus Hospital') }}</td>
+                                <td class="text-end">
+                                    <a href="/api/emergency/report/{{ inc.id }}" target="_blank" class="btn btn-sm btn-outline-cyan">
+                                        <i class="fa fa-file-pdf me-1"></i> Download PDF
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Family Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-warning">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-warning fw-bold"><i class="fa fa-user-pen me-2"></i>Edit Family Profile</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="family-self-profile-form">
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small">Full Name</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" name="name" value="{{ family.name if family else session.get('name','') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small">Phone Number</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" name="phone" value="{{ family.phone if family else '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small">Relationship to Driver</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" name="relation" value="{{ family.relation if family else '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small">New Password (Optional)</label>
+                        <input type="password" class="form-control bg-dark text-white border-secondary" name="password" placeholder="Leave empty to keep current">
+                    </div>
+                    <button type="button" class="btn btn-warning w-100 fw-bold" onclick="saveFamilyProfile()">Save Profile Updates</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+// Leaflet Map Initialization
+document.addEventListener("DOMContentLoaded", function() {
+    {% if emergency and emergency.driver_lat %}
+    const patLat = {{ emergency.driver_lat or 11.2720 }};
+    const patLng = {{ emergency.driver_lng or 77.5920 }};
+    const hospLat = {{ emergency.hosp_lat or 11.3410 }};
+    const hospLng = {{ emergency.hosp_lng or 77.7170 }};
+
+    const map = L.map('map').setView([patLat, patLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    const patMarker = L.marker([patLat, patLng]).addTo(map).bindPopup("🚨 <strong>Loved One Patient Location</strong>").openPopup();
+    const hospMarker = L.marker([hospLat, hospLng]).addTo(map).bindPopup("🏥 <strong>Destination Hospital</strong>: {{ emergency.hospital_name }}");
+
+    const routeLine = L.polyline([[patLat, patLng], [hospLat, hospLng]], {color: '#06b6d4', weight: 4, dashArray: '6, 6'}).addTo(map);
+    map.fitBounds(routeLine.getBounds());
+    {% else %}
+    const map = L.map('map').setView([11.2720, 77.5920], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+    L.marker([11.2720, 77.5920]).addTo(map).bindPopup("🛡️ <strong>Loved One Safe</strong>");
+    {% endif %}
+
+    // Socket.IO Listeners
+    if (typeof io !== 'undefined') {
+        const socket = io();
+        socket.on('emergency_created', () => location.reload());
+        socket.on('risk_updated', () => location.reload());
+        socket.on('hospital_accepted', () => location.reload());
+        socket.on('ambulance_requested', () => location.reload());
+    }
+
+    // Auto-poll status fallback every 6s
+    setInterval(() => {
+        fetch('/api/family/emergency-status')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.emergency) {
+                    const currentStatus = "{{ emergency.status if emergency else '' }}";
+                    if (data.emergency.status !== currentStatus) {
+                        location.reload();
+                    }
+                }
+            }).catch(e => {});
+    }, 6000);
+});
+
+function saveFamilyProfile() {
+    const form = document.getElementById('family-self-profile-form');
+    const formData = new FormData(form);
+    const json = {};
+    formData.forEach((v, k) => json[k] = v);
+
+    fetch('/api/profile/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(json)
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.message || 'Profile updated successfully!');
+        location.reload();
+    });
+}
+
+// ===== GOOGLE MAPS NAVIGATION: Family member's current location → admitted hospital =====
+function navigateToAdmittedHospital() {
+    const btn       = document.getElementById('family-navigate-btn');
+    const btnText   = document.getElementById('nav-btn-text');
+    const statusBar = document.getElementById('location-status');
+    const locIcon   = document.getElementById('loc-icon');
+    const locTxt    = document.getElementById('loc-status-text');
+
+    // Hospital destination from server data
+    const hospLat  = {% if emergency and emergency.hosp_lat %}{{ emergency.hosp_lat }}{% else %}null{% endif %};
+    const hospLng  = {% if emergency and emergency.hosp_lng %}{{ emergency.hosp_lng }}{% else %}null{% endif %};
+    const hospName = "{{ (emergency.hospital_name if emergency and emergency.hospital_name else 'Government Medical College Hospital, Perundurai')|replace('"', '') }}";
+
+    // Build destination string: prefer lat/lng for precision, fallback to name search
+    const destination = (hospLat && hospLng)
+        ? `${hospLat},${hospLng}`
+        : encodeURIComponent(hospName);
+
+    if (!navigator.geolocation) {
+        locTxt.textContent = '⚠️ Geolocation not supported by your browser. Opening hospital location instead.';
+        locIcon.className = 'fa fa-triangle-exclamation text-warning';
+        const fallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+        window.open(fallbackUrl, '_blank');
+        return;
+    }
+
+    // Show loading state
+    btn.classList.add('loading');
+    btnText.textContent = 'Getting your location...';
+    locIcon.className = 'fa fa-spinner fa-spin text-cyan';
+    locTxt.textContent = 'Acquiring GPS — please allow location access...';
+    statusBar.style.borderColor = 'rgba(6, 182, 212, 0.4)';
+
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            const myLat = position.coords.latitude;
+            const myLng = position.coords.longitude;
+            const accuracy = Math.round(position.coords.accuracy);
+
+            // Build Google Maps Navigation URL
+            // origin = my current GPS location, destination = hospital
+            const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${myLat},${myLng}&destination=${destination}&travelmode=driving`;
+
+            // Open Google Maps in new tab (will trigger app on mobile)
+            window.open(mapsUrl, '_blank');
+
+            // Update UI
+            btn.classList.remove('loading');
+            btnText.textContent = '🗺️ Route Opened in Google Maps!';
+            locIcon.className = 'fa fa-circle-check text-success';
+            locTxt.textContent = `✅ Your location: ${myLat.toFixed(5)}, ${myLng.toFixed(5)}  |  Accuracy: ±${accuracy}m  →  Navigating to: ${hospName}`;
+            statusBar.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+            statusBar.style.color = '#34d399';
+
+            // Reset button after 4 seconds
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                btnText.textContent = 'Navigate to Hospital (My Location → Hospital)';
+                statusBar.style.borderColor = '';
+                statusBar.style.color = '';
+                locIcon.className = 'fa fa-location-crosshairs';
+                locTxt.textContent = 'Tap again to re-navigate with fresh GPS location';
+            }, 5000);
+        },
+        function(error) {
+            // Handle errors
+            btn.classList.remove('loading');
+            btnText.textContent = 'Navigate to Hospital (My Location → Hospital)';
+
+            let errMsg;
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errMsg = '🔒 Location access denied. Enable GPS in browser settings, then try again.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errMsg = '📡 Location signal unavailable. Opening hospital location on map instead.';
+                    break;
+                case error.TIMEOUT:
+                    errMsg = '⏱️ GPS timeout. Try again or move to an open area.';
+                    break;
+                default:
+                    errMsg = '⚠️ Could not get your location. Opening hospital on map.';
+            }
+
+            locIcon.className = 'fa fa-triangle-exclamation text-warning';
+            locTxt.textContent = errMsg;
+            statusBar.style.borderColor = 'rgba(245,158,11,0.4)';
+            statusBar.style.color = '#fbbf24';
+
+            // Fallback: open hospital location without origin
+            const fallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+            window.open(fallbackUrl, '_blank');
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 12000,
+            maximumAge: 0
+        }
+    );
+}
+
+</script>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-white"><i class="bi bi-truck text-danger"></i> Logistics Dispatch Center</h2>
+    <div>
+        <span class="badge bg-danger blink">Live Updates Active</span>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Active Emergencies Queue -->
+    <div class="col-lg-4">
+        <div class="glass-card h-100">
+            <h5 class="text-white border-bottom border-secondary pb-2">Active Emergencies</h5>
+            <div id="emergencies-list" class="mt-3">
+                <!-- Populated by JS / API -->
+                <p class="text-muted small">Loading active emergencies...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Map -->
+    <div class="col-lg-8">
+        <div class="glass-card p-0 overflow-hidden" style="height: 500px; position: relative;">
+            <div id="map" style="width: 100%; height: 100%;"></div>
+            
+            <!-- Map Overlay UI for Dispatch Controls -->
+            <div id="dispatch-overlay" class="position-absolute bottom-0 start-0 w-100 p-3 bg-dark bg-opacity-75 d-none" style="backdrop-filter: blur(5px);">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <h6 class="text-warning mb-1">Target: <span id="target-name">Unknown</span></h6>
+                        <small class="text-white">Emergency: <span id="target-type" class="text-danger">None</span></small>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h6 class="text-white mb-1">Ambulance: <span id="amb-id" class="text-info">Searching...</span></h6>
+                        <small class="text-muted">ETA: <span id="amb-eta">-- min</span> (<span id="amb-dist">-- km</span>)</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-danger btn-sm" onclick="confirmDispatch()">CONFIRM DISPATCH</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .blink { animation: blinker 1s linear infinite; }
+    @keyframes blinker { 50% { opacity: 0; } }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Initialize Map using Leaflet (Fallback to OSM since Google Maps API key might not exist)
+    const map = L.map('map').setView([11.2741, 77.5810], 12); // Default to Thangam Hospital Area
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Custom Markers
+    const hospitalIcon = L.divIcon({ html: '<i class="bi bi-hospital text-primary" style="font-size: 24px;"></i>', className: 'marker-clear' });
+    const ambulanceIcon = L.divIcon({ html: '<i class="bi bi-truck text-success" style="font-size: 24px;"></i>', className: 'marker-clear' });
+    const emergencyIcon = L.divIcon({ html: '<i class="bi bi-exclamation-triangle-fill text-danger blink" style="font-size: 24px;"></i>', className: 'marker-clear' });
+
+    // Dummy Markers for Demo
+    L.marker([11.2741, 77.5810], {icon: hospitalIcon}).addTo(map).bindPopup("Thangam Hospital");
+    
+    let ambMarker = L.marker([11.2900, 77.5900], {icon: ambulanceIcon}).addTo(map).bindPopup("Ambulance AMB-001 (Available)");
+    let emergencyMarker = null;
+
+    // Simulate Receiving an Emergency
+    setTimeout(() => {
+        const emergenciesList = document.getElementById('emergencies-list');
+        emergenciesList.innerHTML = `
+            <div class="p-3 border border-danger rounded bg-danger bg-opacity-10 mb-2 cursor-pointer" onclick="selectEmergency()">
+                <div class="d-flex justify-content-between">
+                    <strong class="text-white">Driver: LITHHISH</strong>
+                    <span class="badge bg-danger">CRITICAL</span>
+                </div>
+                <p class="text-danger small m-0 mt-1">Cardiac Emergency</p>
+                <small class="text-muted">Lat: 11.2800, Lng: 77.5850</small>
+            </div>
+        `;
+    }, 2000);
+
+    function selectEmergency() {
+        if(emergencyMarker) map.removeLayer(emergencyMarker);
+        
+        emergencyMarker = L.marker([11.2800, 77.5850], {icon: emergencyIcon}).addTo(map).bindPopup("Emergency Location: LITHHISH");
+        map.flyTo([11.2800, 77.5850], 14);
+
+        // Show overlay
+        document.getElementById('dispatch-overlay').classList.remove('d-none');
+        document.getElementById('target-name').innerText = "LITHHISH";
+        document.getElementById('target-type').innerText = "Cardiac Emergency";
+        
+        // Mock Dispatch API call
+        document.getElementById('amb-id').innerText = "AMB-001";
+        document.getElementById('amb-eta').innerText = "3 min";
+        document.getElementById('amb-dist').innerText = "1.2 km";
+    }
+
+    function confirmDispatch() {
+        alert("Dispatch confirmed! Ambulance AMB-001 is en route to LITHHISH.");
+        ambMarker.bindPopup("Ambulance AMB-001 (En Route)");
+        
+        // Simulate movement towards emergency
+        let steps = 5;
+        let latStep = (11.2800 - 11.2900) / steps;
+        let lngStep = (77.5850 - 77.5900) / steps;
+        let currentStep = 0;
+        
+        let interval = setInterval(() => {
+            currentStep++;
+            let newLat = 11.2900 + (latStep * currentStep);
+            let newLng = 77.5900 + (lngStep * currentStep);
+            ambMarker.setLatLng([newLat, newLng]);
+            
+            if (currentStep >= steps) {
+                clearInterval(interval);
+                alert("🚨 AMBULANCE NEARBY: 500-meter proximity alert triggered! Notifying hospital.");
+            }
+        }, 1000);
+    }
+</script>
+<style>
+    .marker-clear { background: transparent; border: none; }
+</style>
+{% endblock %}

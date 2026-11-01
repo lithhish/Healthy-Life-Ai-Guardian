@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block page_title %}Erode District Hospital & Specialist Finder{% endblock %}
+
+{% block extra_css %}
+<style>
+    .erode-header-bar {
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(0, 240, 255, 0.25);
+        border-radius: 16px;
+        padding: 1rem 1.5rem;
+    }
+    .chip-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #cbd5e1;
+        border-radius: 20px;
+        padding: 0.35rem 0.85rem;
+        font-size: 0.82rem;
+        font-weight: 500;
+        transition: all 0.25s ease;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+    .chip-btn:hover, .chip-btn.active {
+        background: rgba(0, 240, 255, 0.15);
+        border-color: var(--color-cyan);
+        color: var(--color-cyan);
+        box-shadow: 0 0 12px var(--color-cyan-glow);
+    }
+    .hosp-card {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 1.1rem;
+        margin-bottom: 0.9rem;
+        transition: all 0.25s ease;
+        cursor: pointer;
+    }
+    .hosp-card:hover, .hosp-card.selected {
+        border-color: var(--color-cyan);
+        background: rgba(10, 25, 47, 0.85);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 240, 255, 0.15);
+    }
+    .hosp-scroll-container {
+        max-height: calc(100vh - 280px);
+        overflow-y: auto;
+        padding-right: 4px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-cyan) rgba(255,255,255,0.05);
+    }
+    .badge-verified {
+        background: rgba(0, 230, 118, 0.15);
+        color: #00e676;
+        border: 1px solid rgba(0, 230, 118, 0.4);
+    }
+    .badge-google {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+    .map-container {
+        height: calc(100vh - 180px);
+        min-height: 520px;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 240, 255, 0.2);
+        overflow: hidden;
+        position: relative;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-3">
+    
+    <!-- Top Bar: Erode District Header -->
+    <div class="erode-header-bar mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h4 class="mb-0 text-white font-weight-bold">
+                <i class="fa-solid fa-hospital-user text-cyan me-2"></i>ERODE DISTRICT HOSPITAL & SPECIALIST FINDER
+            </h4>
+            <span class="text-secondary small">
+                <i class="fa-solid fa-location-dot text-danger me-1"></i> Erode District Boundary Restricted • Real Google Maps & Places Integration
+            </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-dark border border-cyan text-cyan px-3 py-2">
+                <i class="fa-solid fa-map-location-dot me-1"></i> Erode Focus Mode
+            </span>
+            <button id="btn-use-gps" class="btn btn-sm btn-neon">
+                <i class="fa-solid fa-crosshairs me-1"></i> My Location
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Specialist Chips -->
+    <div class="d-flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-none">
+        <button class="chip-btn active" data-specialty="All"><i class="fa-solid fa-border-all me-1"></i> All Hospitals</button>
+        <button class="chip-btn" data-specialty="Cardiology">❤️ Heart Specialist</button>
+        <button class="chip-btn" data-specialty="Pulmonology">🫁 Lung Specialist</button>
+        <button class="chip-btn" data-specialty="Neurology">🧠 Brain Specialist</button>
+        <button class="chip-btn" data-specialty="Orthopaedics">🦴 Bone Specialist</button>
+        <button class="chip-btn" data-specialty="Nephrology">🧪 Kidney Specialist</button>
+        <button class="chip-btn" data-specialty="Paediatrics">👶 Child Specialist</button>
+        <button class="chip-btn" data-specialty="Obstetrics & Gynaecology">👩 Women's Specialist</button>
+        <button class="chip-btn" data-specialty="Emergency Medicine">🚨 Emergency & ICU</button>
+        <button class="chip-btn" data-type="Government">🏛️ Government GH</button>
+        <button class="chip-btn" data-type="Multi-Speciality">🏨 Multi-Speciality</button>
+    </div>
+
+    <div class="row g-3">
+        <!-- LEFT COLUMN: Filters & Hospital List -->
+        <div class="col-lg-5 col-xl-4">
+            <div class="glass-card p-3 mb-3">
+                <!-- Search Box -->
+                <div class="input-group mb-2 form-glass">
+                    <span class="input-group-text bg-transparent border-secondary text-cyan"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="search-input" class="form-control" placeholder="Search hospital, specialty (e.g. heart, lung)...">
+                    <button class="btn btn-outline-secondary" type="button" id="search-clear-btn" style="display:none;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- Advanced Filters Accordion / Grid -->
+                <div class="row g-2 small">
+                    <div class="col-6">
+                        <label class="text-secondary small d-block">Hospital Type</label>
+                        <select id="filter-type" class="form-select form-select-sm bg-dark text-white border-secondary">
+                            <option value="All">All Types</option>
+                            <option value="Government">Government</option>
+                            <option value="Private">Private</option>
+                            <option value="Multi-Speciality">Multi-Speciality</option>
+                            <option value="Emergency">Emergency Capable</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="text-secondary small d-block">Medical Specialty</label>
+                        <select id="filter-specialty" class="form-select form-select-sm bg-dark text-white border-secondary">
+                            <option value="All">All Specialties</option>
+                            <option value="Cardiology">Cardiology (Heart)</option>
+                            <option value="Pulmonology">Pulmonology (Lung)</option>
+                            <option value="Neurology">Neurology (Brain)</option>
+                            <option value="Orthopaedics">Orthopaedics (Bone)</option>
+                            <option value="General Medicine">General Medicine</option>
+                            <option value="Emergency Medicine">Emergency Medicine</option>
+                            <option value="Trauma Care">Trauma Care</option>
+                            <option value="Critical Care / ICU">Critical Care / ICU</option>
+                            <option value="Paediatrics">Paediatrics (Child)</option>
+                            <option value="Obstetrics & Gynaecology">Gynaecology (Women)</option>
+                            <option value="Nephrology">Nephrology (Kidney)</option>
+                            <option value="Urology">Urology</option>
+                            <option value="Gastroenterology">Gastroenterology (Stomach)</option>
+                            <option value="ENT">ENT (Ear Nose Throat)</option>
+                            <option value="Ophthalmology">Ophthalmology (Eye)</option>
+                            <option value="Dermatology">Dermatology (Skin)</option>
+                            <option value="Oncology">Oncology (Cancer)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="text-secondary small d-block">Distance Radius</label>
+                        <select id="filter-radius" class="form-select form-select-sm bg-dark text-white border-secondary">
+                            <option value="">Entire Erode District</option>
+                            <option value="5">Within 5 km</option>
+                            <option value="10">Within 10 km</option>
+                            <option value="25">Within 25 km</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="text-secondary small d-block">Min Rating</label>
+                        <select id="filter-rating" class="form-select form-select-sm bg-dark text-white border-secondary">
+                            <option value="0">Any Rating</option>
+                            <option value="4">4.0+ Stars</option>
+                            <option value="4.5">4.5+ Stars</option>
+                        </select>
+                    </div>
+                    <div class="col-12 mt-2 d-flex justify-content-between align-items-center">
+                        <div class="form-check form-switch small">
+                            <input class="form-check-input" type="checkbox" id="toggle-expand-outside">
+                            <label class="form-check-input-label text-warning small ms-1" for="toggle-expand-outside">Expand outside Erode District</label>
+                        </div>
+                        <span id="results-count-badge" class="badge bg-primary">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hospital List Cards Container -->
+            <div id="hospital-list" class="hosp-scroll-container">
+                <div class="text-center py-4 text-secondary">
+                    <div class="spinner-border text-cyan mb-2" role="status"></div>
+                    <p class="small">Fetching Erode District hospitals...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Google Maps Container -->
+        <div class="col-lg-7 col-xl-8">
+            <div class="glass-card p-2 map-container">
+                <div id="google-map" style="width: 100%; height: 100%; border-radius: 12px;"></div>
+                
+                <!-- Map Legend Overlay -->
+                <div class="position-absolute bottom-0 start-0 m-3 p-2 rounded bg-dark border border-secondary text-white small" style="z-index: 10; opacity: 0.9;">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#ef4444; border:2px solid #fff;"></span> Emergency / ICU Hospital
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#3b82f6; border:2px solid #fff;"></span> General / Multi-Speciality
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#00e5ff; border:2px solid #fff;"></span> Current Location
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Hospital Information Modal -->
+<div class="modal fade" id="hospitalDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <div>
+                    <h5 class="modal-title text-cyan font-weight-bold" id="modal-hosp-name">Hospital Name</h5>
+                    <span id="modal-hosp-type" class="badge bg-primary">Multi-Speciality</span>
+                    <span id="modal-hosp-source" class="badge badge-verified ms-1"><i class="fa-solid fa-circle-check me-1"></i> Admin Verified</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <p class="text-secondary small mb-2"><i class="fa-solid fa-location-dot text-danger me-1"></i> <span id="modal-hosp-address">--</span></p>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <span class="text-warning font-weight-bold"><i class="fa-solid fa-star me-1"></i><span id="modal-hosp-rating">4.5</span> (<span id="modal-hosp-reviews">120</span> reviews)</span>
+                            <span class="text-success font-weight-bold"><i class="fa-solid fa-clock me-1"></i><span id="modal-hosp-status">OPEN NOW</span></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <h6 class="text-cyan border-bottom border-secondary pb-1 mb-2"><i class="fa-solid fa-stethoscopes me-2"></i>Verified Medical Specialties</h6>
+                            <div id="modal-hosp-specialties" class="d-flex flex-wrap gap-1">
+                                <!-- Dynamic chips -->
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <h6 class="text-cyan border-bottom border-secondary pb-1 mb-2"><i class="fa-solid fa-square-plus me-2"></i>Services & Treatments</h6>
+                            <ul id="modal-hosp-services" class="small text-secondary ps-3 mb-0">
+                                <!-- Dynamic list -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="p-3 rounded bg-black border border-secondary mb-3">
+                            <h6 class="text-cyan mb-2"><i class="fa-solid fa-calendar-days me-2"></i>Working Hours</h6>
+                            <div id="modal-hosp-hours" class="small text-secondary">
+                                <!-- Dynamic working hours -->
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <a id="modal-call-btn" href="#" class="btn btn-outline-cyan btn-sm">
+                                <i class="fa-solid fa-phone me-1"></i> Call Hospital
+                            </a>
+                            <a id="modal-nav-btn" href="#" target="_blank" class="btn btn-neon btn-sm">
+                                <i class="fa-solid fa-map-location-dot me-1"></i> Get Google Directions
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Doctors Section -->
+                    <div class="col-12 mt-2">
+                        <h6 class="text-cyan border-bottom border-secondary pb-1 mb-2"><i class="fa-solid fa-user-doctor me-2"></i>Verified Doctors & Specialists Roster</h6>
+                        <div id="modal-hosp-doctors" class="row g-2">
+                            <!-- Dynamic doctor cards -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/erode_maps.js') }}"></script>
+{% endblock %}

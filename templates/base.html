@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Driver Health Guardian</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --color-bg-dark: #050b14;
+            --color-bg-light: #0a192f;
+            --color-cyan: #00f0ff;
+            --color-cyan-glow: rgba(0, 240, 255, 0.4);
+            --color-danger: #ff003c;
+            --color-danger-glow: rgba(255, 0, 60, 0.4);
+            --color-warning: #ffb703;
+            --color-success: #00e676;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top center, var(--color-bg-light) 0%, var(--color-bg-dark) 100%);
+            background-attachment: fixed;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .sidebar {
+            height: 100vh;
+            background: rgba(10, 25, 47, 0.85);
+            backdrop-filter: blur(16px);
+            border-right: 1px solid rgba(0, 240, 255, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+        }
+        .main-content {
+            margin-left: 280px;
+            padding: 2.5rem;
+            min-height: 100vh;
+        }
+        .nav-link {
+            color: #94a3b8;
+            padding: 0.75rem 1.25rem;
+            transition: all 0.2s ease;
+            border-radius: 12px;
+            margin: 0.25rem 0.85rem;
+            font-weight: 600;
+            font-size: 0.88rem;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            border-left: 3px solid transparent;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .nav-link:hover {
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.12) 0%, rgba(10, 25, 47, 0.4) 100%);
+            color: #ffffff;
+            border-left: 3px solid var(--color-cyan);
+            transform: translateX(3px);
+        }
+        .nav-link.active {
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 240, 255, 0.04) 100%);
+            color: var(--color-cyan) !important;
+            border-left: 3px solid var(--color-cyan);
+            box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.1);
+        }
+        .nav-link i, .nav-link .nav-icon {
+            width: 24px;
+            text-align: center;
+            font-size: 1.1rem;
+            margin-right: 12px;
+            flex-shrink: 0;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .sidebar-brand {
+            padding: 1.75rem 1.25rem 1.25rem 1.25rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+            margin-bottom: 1rem;
+            text-shadow: 0 0 10px var(--color-cyan-glow);
+        }
+        .sidebar-section-header {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            text-transform: uppercase;
+            padding: 1.2rem 1.25rem 0.4rem 1.25rem;
+            margin-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        /* Premium Glass Card */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 1.75rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .glow-cyan {
+            border-top: 1px solid var(--color-cyan) !important;
+            box-shadow: 0 -4px 20px var(--color-cyan-glow), 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .glow-danger {
+            border-top: 1px solid var(--color-danger) !important;
+            box-shadow: 0 -4px 20px var(--color-danger-glow), 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        /* Buttons */
+        .btn-neon {
+            background: transparent;
+            color: var(--color-cyan);
+            border: 1px solid var(--color-cyan);
+            box-shadow: 0 0 10px var(--color-cyan-glow) inset;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            border-radius: 10px;
+        }
+        .btn-neon:hover {
+            background: var(--color-cyan);
+            color: #000;
+            box-shadow: 0 0 20px var(--color-cyan-glow);
+        }
+        /* Custom Inputs */
+        .form-glass .form-control {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-radius: 8px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .form-glass .form-control:focus {
+            background: rgba(0, 240, 255, 0.05);
+            border-color: var(--color-cyan);
+            box-shadow: 0 0 10px var(--color-cyan-glow);
+            color: #fff;
+        }
+        .form-glass .form-label {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
+        /* ========= Custom Cyan Utility Classes ========= */
+        /* These are used across ALL portal templates */
+        .text-cyan { color: var(--color-cyan) !important; }
+        .bg-cyan { background-color: var(--color-cyan) !important; color: #000 !important; }
+        .border-cyan { border-color: var(--color-cyan) !important; }
+
+        /* Solid Cyan Button */
+        .btn-cyan {
+            background: var(--color-cyan);
+            color: #000;
+            border: 1px solid var(--color-cyan);
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        .btn-cyan:hover, .btn-cyan:focus {
+            background: #00d4e6;
+            border-color: #00d4e6;
+            color: #000;
+            box-shadow: 0 0 18px var(--color-cyan-glow);
+        }
+
+        /* Outline Cyan Button */
+        .btn-outline-cyan {
+            color: var(--color-cyan);
+            border: 1px solid var(--color-cyan);
+            background: transparent;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        .btn-outline-cyan:hover, .btn-outline-cyan:focus {
+            background: var(--color-cyan);
+            color: #000;
+            box-shadow: 0 0 18px var(--color-cyan-glow);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar d-flex flex-column">
+        <div class="sidebar-brand text-primary">
+            <img src="{{ url_for('static', filename='images/guardian_logo.jpg') }}" alt="AI Guardian Logo" 
+                 style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover; border: 2px solid var(--color-cyan); box-shadow: 0 0 15px var(--color-cyan-glow);">
+            <div>
+                <div style="line-height: 1.1; font-weight: 800; color: #fff;">AI GUARDIAN</div>
+                {% if session.get('role') == 'driver' %}
+                <div style="font-size: 0.6rem; color: var(--color-cyan); letter-spacing: 2px; font-weight: 400; opacity: 0.8;">DRIVER PORTAL</div>
+                {% elif session.get('role') == 'hospital' %}
+                <div style="font-size: 0.6rem; color: var(--color-cyan); letter-spacing: 2px; font-weight: 400; opacity: 0.8;">HOSPITAL ADMIN</div>
+                {% elif session.get('role') in ['doctor','nurse','receptionist','pharmacist'] %}
+                <div style="font-size: 0.6rem; color: var(--color-cyan); letter-spacing: 2px; font-weight: 400; opacity: 0.8;">STAFF PORTAL</div>
+                {% elif session.get('role') == 'ambulance' or session.get('role') == 'ambulance_driver' %}
+                <div style="font-size: 0.6rem; color: var(--color-cyan); letter-spacing: 2px; font-weight: 400; opacity: 0.8;">AMBULANCE</div>
+                {% elif session.get('role') == 'admin' %}
+                <div style="font-size: 0.6rem; color: var(--color-cyan); letter-spacing: 2px; font-weight: 400; opacity: 0.8;">SYSTEM ADMIN</div>
+                {% elif session.get('role') == 'family' %}
+                <div style="font-size: 0.6rem; color: var(--color-cyan); letter-spacing: 2px; font-weight: 400; opacity: 0.8;">FAMILY PORTAL</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <ul class="nav flex-column mb-auto">
+            <li class="nav-item">
+                <a href="{{ url_for('main.home') }}" class="nav-link {% if request.path == '/' %}active{% endif %}">
+                    <i class="fa-solid fa-house"></i> <span>HOME</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('main.erode_hospitals') }}" class="nav-link {% if request.path.startswith('/erode-hospitals') %}active{% endif %}">
+                    <i class="fa-solid fa-hospital-user text-cyan"></i> <span>ERODE HOSPITAL FINDER</span>
+                </a>
+            </li>
+            
+            <div class="sidebar-section-header">GUARDIAN PORTALS</div>
+
+            <li class="nav-item">
+                <a href="{{ url_for('auth.login_hub') }}" class="nav-link {% if request.path == '/login/hub' %}active{% endif %}">
+                    <i class="fa-solid fa-layer-group text-cyan"></i> <span>PORTAL HUB</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('auth.driver_login') }}" class="nav-link {% if request.path.startswith('/driver') %}active{% endif %}">
+                    <i class="fa-solid fa-steering-wheel text-cyan"></i> <span>DRIVER PORTAL</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('auth.family_login') }}" class="nav-link {% if request.path.startswith('/family') %}active{% endif %}">
+                    <i class="fa-solid fa-users text-cyan"></i> <span>FAMILY PORTAL</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('auth.staff_login') }}" class="nav-link {% if request.path.startswith('/staff') %}active{% endif %}">
+                    <i class="fa-solid fa-user-doctor text-cyan"></i> <span>HOSPITAL STAFF PORTAL</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('auth.hospital_login') }}" class="nav-link {% if request.path.startswith('/hospital') %}active{% endif %}">
+                    <i class="fa-solid fa-hospital text-cyan"></i> <span>HOSPITAL ADMIN PORTAL</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('auth.ambulance_login') }}" class="nav-link {% if request.path.startswith('/ambulance') %}active{% endif %}">
+                    <i class="fa-solid fa-truck-medical text-cyan"></i> <span>AMBULANCE PORTAL</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('auth.admin_login') }}" class="nav-link {% if request.path.startswith('/admin') %}active{% endif %}">
+                    <i class="fa-solid fa-user-shield text-cyan"></i> <span>ADMIN PORTAL</span>
+                </a>
+            </li>
+
+            {% if session.get('user_id') %}
+                <li class="nav-item mt-auto pt-3 border-top border-secondary">
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link text-danger">
+                        <i class="fa-solid fa-right-from-bracket"></i> <span>Logout ({{ session.get('name') }})</span>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container-fluid">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        const socket = io();
+        socket.on('connect', () => {
+            console.log('Connected to WebSocket server');
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

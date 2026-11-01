@@ -1,0 +1,727 @@
+{% extends "base.html" %}
+
+{% block title %}Receptionist Portal — AI Driver Health Guardian{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --rec-cyan: #06b6d4;
+    --rec-emerald: #10b981;
+    --rec-rose: #f43f5e;
+    --rec-amber: #f59e0b;
+    --rec-violet: #8b5cf6;
+}
+
+.rec-glass-card {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    padding: 26px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+    backdrop-filter: blur(14px);
+    margin-bottom: 24px;
+}
+
+.rec-header {
+    background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.95), rgba(6,182,212,0.08));
+    border: 1px solid rgba(6,182,212,0.2);
+    border-radius: 20px;
+    padding: 24px 28px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    margin-bottom: 24px;
+}
+.rec-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #f43f5e, #f59e0b, #06b6d4, #8b5cf6);
+}
+
+/* Stat pills */
+.stat-pill {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 10px 16px;
+    text-align: center;
+    min-width: 100px;
+}
+.stat-val { font-size: 1.5rem; font-weight: 800; font-family: 'Share Tech Mono', monospace; line-height: 1; }
+.stat-lbl { font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+/* Section title */
+.sec-title {
+    font-size: 0.9rem; font-weight: 800; letter-spacing: 0.07em;
+    text-transform: uppercase; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+}
+
+/* Scrollable table */
+.tbl-scroll { max-height: 420px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(6,182,212,0.3) transparent; }
+.tbl-scroll::-webkit-scrollbar { width: 4px; }
+.tbl-scroll::-webkit-scrollbar-thumb { background: rgba(6,182,212,0.4); border-radius: 4px; }
+
+/* Action buttons */
+.btn-accept {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff; border: none; border-radius: 8px;
+    padding: 5px 12px; font-weight: 700; font-size: 0.75rem;
+    cursor: pointer; white-space: nowrap; transition: all 0.25s;
+}
+.btn-accept:hover { background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 0 12px rgba(16,185,129,0.4); }
+.btn-accept:disabled { background: rgba(100,116,139,0.3); cursor: not-allowed; }
+
+.btn-admit {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff; border: none; border-radius: 8px;
+    padding: 5px 12px; font-weight: 700; font-size: 0.75rem;
+    cursor: pointer; white-space: nowrap; transition: all 0.25s;
+}
+.btn-admit:hover { background: linear-gradient(135deg, #4f46e5, #4338ca); box-shadow: 0 0 12px rgba(99,102,241,0.4); }
+.btn-admit:disabled { background: rgba(100,116,139,0.3); cursor: not-allowed; }
+
+.btn-discharge {
+    background: rgba(244,63,94,0.12); color: #fb7185;
+    border: 1px solid rgba(244,63,94,0.35); border-radius: 8px;
+    padding: 5px 12px; font-weight: 700; font-size: 0.75rem;
+    cursor: pointer; white-space: nowrap; transition: all 0.25s;
+}
+.btn-discharge:hover { background: #f43f5e; color: #fff; box-shadow: 0 0 12px rgba(244,63,94,0.4); }
+
+.btn-delete {
+    background: rgba(239,68,68,0.1); color: #f87171;
+    border: 1px solid rgba(239,68,68,0.3); border-radius: 8px;
+    padding: 5px 10px; font-weight: 700; font-size: 0.72rem;
+    cursor: pointer; white-space: nowrap; transition: all 0.25s;
+    display: inline-flex; align-items: center; gap: 4px;
+}
+.btn-delete:hover { background: #ef4444; color: #fff; box-shadow: 0 0 12px rgba(239,68,68,0.5); }
+.btn-delete:active { transform: scale(0.96); }
+
+.btn-report {
+    background: rgba(245,158,11,0.12); color: #fbbf24;
+    border: 1px solid rgba(245,158,11,0.3); border-radius: 8px;
+    padding: 5px 10px; font-weight: 600; font-size: 0.72rem;
+    cursor: pointer; white-space: nowrap; transition: all 0.25s; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 4px;
+}
+.btn-report:hover { background: #f59e0b; color: #000; }
+
+/* Status badges */
+.badge-hosp-acc { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.4); }
+.badge-amb-req  { background: rgba(244,63,94,0.15); color: #fb7185; border: 1px solid rgba(244,63,94,0.4); }
+.badge-amb-disp { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.4); }
+.badge-enroute  { background: rgba(6,182,212,0.15); color: #22d3ee; border: 1px solid rgba(6,182,212,0.4); }
+.badge-search   { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.4); }
+.badge-active   { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.4); }
+.badge-default  { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.4); }
+
+/* Pulse dot */
+.pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: #f43f5e; display: inline-block; animation: pdot 1.4s infinite; }
+@keyframes pdot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.5); } }
+
+/* Timeline expand */
+.care-timeline { display: none; background: rgba(15,23,42,0.7); border-radius: 12px; padding: 16px; margin: 8px 0 0; border: 1px solid rgba(255,255,255,0.08); }
+.care-timeline.show { display: block; }
+.medicine-tag { display: inline-block; background: rgba(99,102,241,0.15); color: #a78bfa; border: 1px solid rgba(99,102,241,0.3); border-radius: 6px; padding: 2px 8px; font-size: 0.72rem; margin: 2px; }
+
+/* Pagination */
+.pag-btn { background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 6px 14px; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+.pag-btn:hover { background: rgba(6,182,212,0.15); color: #22d3ee; border-color: rgba(6,182,212,0.4); }
+.pag-btn.active { background: var(--rec-cyan); color: #000; border-color: var(--rec-cyan); font-weight: 700; }
+
+/* Admit modal */
+.modal-glass .modal-content { background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(16px); color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- ===== HEADER ===== -->
+    <div class="rec-header">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="pulse-dot"></span>
+                    <span class="text-secondary small fw-semibold" style="letter-spacing:0.05em;text-transform:uppercase;">Live Emergency Monitoring</span>
+                </div>
+                <h2 class="text-white fw-bold mb-1" style="font-size:1.65rem;">
+                    <i class="fa-solid fa-bell-concierge me-2" style="color:#06b6d4;"></i>RECEPTIONIST ADMISSION PORTAL
+                </h2>
+                <p class="text-secondary small mb-0">
+                    Emergency Admissions · Patient Care · Discharge Management —
+                    <strong class="text-white">{{ hospital_name }}</strong>
+                    <span class="badge bg-dark border ms-2 font-monospace" style="border-color:rgba(6,182,212,0.4)!important;color:#22d3ee;font-size:0.7rem;">
+                        Hospital ID: {{ hospital_id or session.get('hospital_id', 1) }}
+                    </span>
+                </p>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="stat-pill"><div class="stat-val text-rose">{{ active_emergencies|length if active_emergencies else 0 }}</div><div class="stat-lbl">Active Alerts</div></div>
+                <div class="stat-pill"><div class="stat-val text-violet">{{ staff_count or 0 }}</div><div class="stat-lbl">Receptionists</div></div>
+                <div class="stat-pill"><div class="stat-val text-cyan">{{ admissions|selectattr('status','equalto','ADMITTED')|list|length if admissions else 0 }}</div><div class="stat-lbl">Admitted</div></div>
+                <div class="stat-pill"><div class="stat-val text-emerald">{{ admissions|selectattr('status','equalto','DISCHARGED')|list|length if admissions else 0 }}</div><div class="stat-lbl">Discharged</div></div>
+                <div class="stat-pill"><div class="stat-val text-amber" style="font-size:1.1rem;">₹{{ "%.0f"|format(total_bill or 0) }}</div><div class="stat-lbl">Total Bills</div></div>
+                <div class="d-flex flex-column gap-1">
+                    <span class="badge bg-info px-3 py-2"><i class="fa fa-user me-1"></i>{{ session.get('name', 'Receptionist') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SECTION 1: ACTIVE EMERGENCY DISPATCH ===== -->
+    <div class="rec-glass-card">
+        <div class="sec-title" style="color:#f43f5e;">
+            <i class="fa fa-satellite-dish"></i>
+            Active Driver Emergency Cases
+            <span class="badge bg-danger ms-1 px-2 py-1" style="font-size:0.72rem;">{{ active_emergencies|length if active_emergencies else 0 }} Alerts</span>
+            <span class="ms-auto text-secondary small fw-normal" style="text-transform:none;letter-spacing:0;font-size:0.78rem;">
+                Real-time telemetry matched to <strong class="text-white">{{ hospital_name }}</strong>
+            </span>
+        </div>
+
+        <div class="tbl-scroll">
+            <table class="table table-dark table-hover align-middle mb-0" style="font-size:0.81rem;">
+                <thead class="sticky-top" style="background:rgba(15,23,42,0.98);z-index:2;">
+                    <tr class="text-secondary text-uppercase" style="font-size:0.7rem;letter-spacing:0.05em;">
+                        <th>Emergency Code</th>
+                        <th>Driver / Patient</th>
+                        <th>Health Classification</th>
+                        <th>Severity</th>
+                        <th>Location</th>
+                        <th>Timestamp</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="emg-live-body">
+                    {% if active_emergencies %}
+                        {% for em in active_emergencies %}
+                        <tr id="emg-{{ em.id }}">
+                            <td>
+                                <span class="badge bg-dark border font-monospace px-2 py-1" style="border-color:rgba(6,182,212,0.5)!important;color:#22d3ee;font-size:0.72rem;">
+                                    {{ em.emergency_code or ('EMG-%06d' % em.id) }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div style="width:28px;height:28px;border-radius:50%;background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.3);display:flex;align-items:center;justify-content:center;color:#06b6d4;font-size:0.8rem;flex-shrink:0;">
+                                        <i class="fa fa-user"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-white" style="white-space:nowrap;">{{ em.driver_name or 'Unknown' }}</div>
+                                        <div class="text-secondary" style="font-size:0.68rem;">{{ em.driver_id_code or '—' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="fw-semibold {% if em.severity|upper == 'CRITICAL' %}text-danger{% elif em.severity|upper == 'HIGH' %}text-warning{% else %}text-info{% endif %}">
+                                {{ em.prediction or 'UNKNOWN' }}
+                            </td>
+                            <td>
+                                <span class="badge fw-bold {% if em.severity|upper == 'CRITICAL' %}bg-danger{% elif em.severity|upper == 'HIGH' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">
+                                    {{ em.severity|upper if em.severity else 'N/A' }}
+                                </span>
+                            </td>
+                            <td class="font-monospace text-secondary" style="font-size:0.72rem;white-space:nowrap;">
+                                {% if em.driver_lat and em.driver_lng %}
+                                Lat: {{ "%.4f"|format(em.driver_lat|float) }}<br>Lng: {{ "%.4f"|format(em.driver_lng|float) }}
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="text-white-50" style="font-size:0.72rem;white-space:nowrap;">{{ em.timestamp or '—' }}</td>
+                            <td>
+                                {% set st = em.status|upper if em.status else '' %}
+                                {% if st == 'HOSPITAL_ACCEPTED' or st == 'PATIENT_ADMITTED' %}
+                                    <span class="badge badge-hosp-acc font-monospace" style="font-size:0.68rem;">✅ {{ em.status }}</span>
+                                {% elif st == 'AMBULANCE_REQUESTED' %}
+                                    <span class="badge badge-amb-req font-monospace" style="font-size:0.68rem;">AMBULANCE_REQUESTED</span>
+                                {% elif st == 'AMBULANCE_DISPATCHED' %}
+                                    <span class="badge badge-amb-disp font-monospace" style="font-size:0.68rem;">AMBULANCE_DISPATCHED</span>
+                                {% elif st == 'EN_ROUTE_TO_PATIENT' %}
+                                    <span class="badge badge-enroute font-monospace" style="font-size:0.68rem;">EN_ROUTE</span>
+                                {% elif st == 'AMBULANCE_SEARCHING' %}
+                                    <span class="badge badge-search font-monospace" style="font-size:0.68rem;">SEARCHING</span>
+                                {% elif st == 'ACTIVE' %}
+                                    <span class="badge badge-active font-monospace" style="font-size:0.68rem;">Active</span>
+                                {% else %}
+                                    <span class="badge badge-default font-monospace" style="font-size:0.68rem;">{{ em.status or '—' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-flex flex-column gap-1 align-items-end">
+                                    {% set st = em.status|upper if em.status else '' %}
+                                    {% if st not in ['HOSPITAL_ACCEPTED', 'PATIENT_ADMITTED'] %}
+                                    <button class="btn-accept" id="acc-btn-{{ em.id }}"
+                                            onclick="acceptEmergency({{ em.id }}, '{{ em.emergency_code or ('EMG-%06d' % em.id) }}', '{{ em.driver_name|replace("'","") }}', this)">
+                                        <i class="fa fa-check me-1"></i>Accept Emergency
+                                    </button>
+                                    {% else %}
+                                    <button class="btn-admit" id="adm-btn-{{ em.id }}"
+                                            onclick="openAdmitModal({{ em.id }}, '{{ em.emergency_code or ('EMG-%06d' % em.id) }}', '{{ em.driver_name|replace("'","") }}')">
+                                        <i class="fa fa-hospital-user me-1"></i>Admit Patient
+                                    </button>
+                                    <button class="btn-discharge" id="emg-discharge-btn-{{ em.id }}"
+                                            onclick="dischargeEmergency({{ em.id }}, '{{ em.driver_name|replace("'","") }}')">
+                                        <i class="fa fa-person-walking-arrow-right me-1"></i>Discharge
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn-delete" id="del-emg-btn-{{ em.id }}"
+                                            onclick="deleteEmergency({{ em.id }}, '{{ em.emergency_code or ('EMG-%06d' % em.id) }}')"
+                                            title="Delete this emergency record">
+                                        <i class="fa fa-trash-can"></i> Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="8" class="text-center py-5 text-secondary">
+                            <i class="fa fa-satellite-dish fs-2 d-block mb-2"></i>No active emergency dispatches for this hospital.
+                        </td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===== SECTION 2: HOSPITAL ADMISSIONS with Timeline ===== -->
+    <div class="rec-glass-card">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div class="sec-title mb-0" style="color:#06b6d4;">
+                <i class="fa fa-address-book"></i>
+                Emergency Hospital Admissions
+                <span class="text-secondary small fw-normal" style="text-transform:none;letter-spacing:0;font-size:0.78rem;">
+                    {{ total_admissions or 0 }} total records &nbsp;|&nbsp; Page {{ current_page or 1 }} of {{ total_pages or 1 }}
+                </span>
+            </div>
+            <div class="text-secondary small">
+                ₹<strong class="text-amber">{{ "%.2f"|format(total_bill or 0) }}</strong> total billed
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0" style="font-size:0.82rem;">
+                <thead>
+                    <tr class="text-secondary text-uppercase" style="font-size:0.7rem;letter-spacing:0.05em;">
+                        <th>Admission ID</th>
+                        <th>Emergency</th>
+                        <th>Patient</th>
+                        <th>Demographics</th>
+                        <th>Ward / Bed</th>
+                        <th>Days</th>
+                        <th>Admitted At</th>
+                        <th>Bill</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if admissions %}
+                        {% for adm in admissions %}
+                        <tr id="adm-row-{{ adm.id }}">
+                            <td>
+                                <span class="badge bg-dark border font-monospace px-2 py-1" style="border-color:rgba(6,182,212,0.5)!important;color:#22d3ee;font-size:0.7rem;">
+                                    ADM-{{ "%06d"|format(adm.id) }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if adm.emergency_id %}
+                                <span class="badge bg-secondary font-monospace px-1 py-1" style="font-size:0.7rem;">{{ adm.emergency_code or ('EMG-%06d' % adm.emergency_id) }}</span>
+                                {% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-bold text-white">{{ adm.patient_name }}</div>
+                                <div class="text-secondary" style="font-size:0.68rem;">{{ adm.driver_id_code or '—' }}</div>
+                            </td>
+                            <td class="small text-secondary">
+                                {{ adm.age or '—' }} Yrs / {{ adm.gender or '—' }} /
+                                <strong class="text-cyan">{{ adm.blood_group or '—' }}</strong>
+                            </td>
+                            <td>
+                                <span class="text-white-50 small">{{ adm.ward or 'Emergency' }}</span>
+                                &nbsp;-&nbsp;<strong class="text-amber font-monospace">{{ adm.bed_number or 'N/A' }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge" style="background:rgba(6,182,212,0.12);color:#22d3ee;border:1px solid rgba(6,182,212,0.3);font-family:monospace;">
+                                    {{ adm.days_in_hospital or 1 }}d
+                                </span>
+                            </td>
+                            <td class="text-white-50 small" style="white-space:nowrap;">{{ adm.admitted_at or '—' }}</td>
+                            <td>
+                                {% if adm.bill_total %}
+                                <span class="text-amber fw-bold font-monospace small">₹{{ "%.0f"|format(adm.bill_total) }}</span>
+                                {% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if adm.status|upper == 'ADMITTED' %}
+                                <span class="badge" style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.4);">
+                                    <i class="fa fa-circle-dot me-1" style="font-size:0.6rem;"></i>ADMITTED
+                                </span>
+                                {% else %}
+                                <span class="badge" style="background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.4);">
+                                    <i class="fa fa-circle-check me-1" style="font-size:0.6rem;"></i>DISCHARGED
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-flex flex-column gap-1 align-items-end">
+                                    <!-- Expand care timeline -->
+                                    <button class="btn-admit" style="background:rgba(99,102,241,0.15);color:#a78bfa;border:1px solid rgba(99,102,241,0.3);"
+                                            onclick="toggleTimeline({{ adm.id }})">
+                                        <i class="fa fa-notes-medical me-1"></i>Care Details
+                                    </button>
+                                    {% if adm.status|upper == 'ADMITTED' %}
+                                    <button class="btn-discharge" id="discharge-btn-{{ adm.id }}"
+                                            onclick="dischargePatient({{ adm.id }}, '{{ adm.patient_name|replace("'", "\\'") }}')">
+                                        <i class="fa fa-hospital-user me-1"></i>Discharge
+                                    </button>
+                                    {% else %}
+                                    <span class="text-muted" style="font-size:0.7rem;">{{ adm.discharged_at or 'Discharged' }}</span>
+                                    {% endif %}
+                                    {% if adm.pdf_filename %}
+                                    <a href="/static/reports/{{ adm.pdf_filename }}" target="_blank" class="btn-report">
+                                        <i class="fa fa-file-pdf"></i>Report
+                                    </a>
+                                    {% elif adm.report_id_code %}
+                                    <a href="/api/emergency/report/{{ adm.emergency_id }}" target="_blank" class="btn-report">
+                                        <i class="fa fa-file-pdf"></i>Report
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                <!-- Care Timeline Expanded -->
+                                <div class="care-timeline text-start" id="timeline-{{ adm.id }}">
+                                    {% set care = medicines_map.get(adm.id) %}
+                                    {% if care %}
+                                    <div class="mb-2">
+                                        <span class="text-secondary small">Diagnosis:</span>
+                                        <span class="text-white fw-bold small ms-1">{{ care.diagnosis or 'N/A' }}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="text-secondary small">Treatment:</span>
+                                        <span class="text-white-50 small ms-1">{{ care.treatment or 'N/A' }}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="text-secondary small d-block mb-1">Medicines Prescribed:</span>
+                                        {% if care.medicines %}
+                                            {% for med in care.medicines %}
+                                            <span class="medicine-tag">
+                                                💊 {{ med.name or med.get('medicine_name','Med') }}
+                                                {% if med.dosage %} — {{ med.dosage }}{% endif %}
+                                                {% if med.qty %} × {{ med.qty }}{% endif %}
+                                            </span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted small">No medicines recorded yet</span>
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted small">No prescription data yet. Doctor consultation needed.</span>
+                                    {% endif %}
+                                    <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary">
+                                        <i class="fa fa-calendar-days text-cyan"></i>
+                                        <span class="text-secondary small">{{ adm.days_in_hospital or 1 }} day(s) in hospital</span>
+                                        {% if adm.doctor_name %}<span class="text-secondary small">· Dr. {{ adm.doctor_name }}</span>{% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="10" class="text-center py-5 text-muted">
+                            <i class="fa fa-circle-check text-success me-2 fs-4"></i>No admissions on record for this hospital.
+                        </td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ===== PAGINATION ===== -->
+        {% if total_pages and total_pages > 1 %}
+        <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2">
+            <div class="text-secondary small">
+                Showing page <strong class="text-white">{{ current_page }}</strong> of
+                <strong class="text-white">{{ total_pages }}</strong>
+                &nbsp;({{ total_admissions }} total admissions)
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                {% if current_page > 1 %}
+                <a href="?page={{ current_page - 1 }}" class="pag-btn"><i class="fa fa-chevron-left me-1"></i>Previous</a>
+                {% endif %}
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == current_page %}
+                    <a href="?page={{ p }}" class="pag-btn active">{{ p }}</a>
+                    {% elif p == 1 or p == total_pages or (p >= current_page - 2 and p <= current_page + 2) %}
+                    <a href="?page={{ p }}" class="pag-btn">{{ p }}</a>
+                    {% elif p == current_page - 3 or p == current_page + 3 %}
+                    <span class="pag-btn" style="cursor:default;">...</span>
+                    {% endif %}
+                {% endfor %}
+                {% if current_page < total_pages %}
+                <a href="?page={{ current_page + 1 }}" class="pag-btn">Next <i class="fa fa-chevron-right ms-1"></i></a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="text-secondary small mt-3">
+            {{ total_admissions or 0 }} total records &nbsp;·&nbsp; ₹{{ "%.2f"|format(total_bill or 0) }} total billed
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ===== ADMIT PATIENT MODAL ===== -->
+<div class="modal fade modal-glass" id="admitModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-violet fw-bold"><i class="fa fa-hospital-user me-2"></i>Admit Patient</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3 p-3 rounded-3" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);">
+                    <div class="text-secondary small">Emergency &amp; Patient</div>
+                    <div class="fw-bold text-white" id="admit-emg-label">—</div>
+                </div>
+                <input type="hidden" id="admit-emergency-id">
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Ward</label>
+                    <select class="form-select bg-dark text-white border-secondary" id="admit-ward">
+                        <option value="Emergency Ward">Emergency Ward</option>
+                        <option value="ICU">ICU (Intensive Care Unit)</option>
+                        <option value="Cardiac Care Unit">Cardiac Care Unit</option>
+                        <option value="General Ward">General Ward</option>
+                        <option value="Trauma Ward">Trauma Ward</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-secondary small">Bed Number</label>
+                    <input type="text" class="form-control bg-dark text-white border-secondary" id="admit-bed" placeholder="e.g. E-01, ICU-03" value="E-01">
+                </div>
+                <button class="btn w-100 fw-bold py-2" style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;"
+                        onclick="confirmAdmit()">
+                    <i class="fa fa-hospital-user me-2"></i>Confirm Admission
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:9999;">
+    <div id="recToast" class="toast border-0" role="alert" style="background:rgba(15,23,42,0.97);border:1px solid rgba(16,185,129,0.4)!important;backdrop-filter:blur(12px);">
+        <div class="d-flex">
+            <div class="toast-body text-white fw-semibold" id="toastMsg">✅ Action completed.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+const HOSPITAL_ID = {{ hospital_id or session.get('hospital_id', 1) }};
+const HOSPITAL_NAME = "{{ hospital_name|replace('"','') }}";
+
+function showToast(msg, color) {
+    const t = document.getElementById('recToast');
+    document.getElementById('toastMsg').innerHTML = msg;
+    t.style.borderColor = color || 'rgba(16,185,129,0.4)';
+    const toast = new bootstrap.Toast(t, { delay: 4000 });
+    toast.show();
+}
+
+// ─── Accept Emergency ───────────────────────────────────────────
+function acceptEmergency(emergencyId, emgCode, driverName, btn) {
+    if (!confirm(`✅ Accept emergency ${emgCode} for patient "${driverName}"?\n\nThis will:\n• Mark hospital as ACCEPTED\n• Notify ambulance driver with route to ${HOSPITAL_NAME}`)) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Accepting...';
+
+    fetch('/api/hospital/emergency/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emergency_id: emergencyId, hospital_id: HOSPITAL_ID })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`✅ Emergency <strong>${emgCode}</strong> accepted! Ambulance driver notified with route to <strong>${HOSPITAL_NAME}</strong>.`, 'rgba(16,185,129,0.4)');
+            // Update row UI: swap Accept button → Admit Patient
+            const row = document.getElementById(`emg-${emergencyId}`);
+            if (row) {
+                const actionTd = row.cells[7];
+                const statusTd = row.cells[6];
+                statusTd.innerHTML = `<span class="badge badge-hosp-acc font-monospace" style="font-size:0.68rem;">✅ HOSPITAL_ACCEPTED</span>`;
+                actionTd.innerHTML = `
+                    <div class="d-flex flex-column gap-1 align-items-end">
+                        <button class="btn-admit" onclick="openAdmitModal(${emergencyId}, '${emgCode}', '${driverName}')">
+                            <i class="fa fa-hospital-user me-1"></i>Admit Patient
+                        </button>
+                    </div>`;
+            }
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-check me-1"></i>Accept Emergency';
+            showToast(`⚠️ ${data.error || 'Failed to accept emergency.'}`, 'rgba(244,63,94,0.4)');
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-check me-1"></i>Accept Emergency';
+        showToast('⚠️ Network error. Please try again.', 'rgba(244,63,94,0.4)');
+    });
+}
+
+// ─── Open Admit Modal ──────────────────────────────────────────
+function openAdmitModal(emergencyId, emgCode, driverName) {
+    document.getElementById('admit-emergency-id').value = emergencyId;
+    document.getElementById('admit-emg-label').innerHTML = `<span class="font-monospace text-cyan">${emgCode}</span> &nbsp;—&nbsp; <strong>${driverName}</strong>`;
+    new bootstrap.Modal(document.getElementById('admitModal')).show();
+}
+
+// ─── Confirm Admit ─────────────────────────────────────────────
+function confirmAdmit() {
+    const emergencyId = document.getElementById('admit-emergency-id').value;
+    const ward = document.getElementById('admit-ward').value;
+    const bed = document.getElementById('admit-bed').value || 'E-01';
+
+    fetch('/api/hospital/patient/admit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emergency_id: parseInt(emergencyId), hospital_id: HOSPITAL_ID, ward, bed_number: bed })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('admitModal')).hide();
+            showToast(`🏥 Patient <strong>${data.patient_name}</strong> admitted to <strong>${data.ward}</strong>, Bed <strong>${data.bed_number}</strong>. Admission record created.`, 'rgba(99,102,241,0.4)');
+            setTimeout(() => location.reload(), 2500);
+        } else {
+            showToast(`⚠️ ${data.error || 'Failed to admit patient.'}`, 'rgba(244,63,94,0.4)');
+        }
+    })
+    .catch(() => showToast('⚠️ Network error. Please try again.', 'rgba(244,63,94,0.4)'));
+}
+
+// ─── Discharge Patient ─────────────────────────────────────────
+function dischargePatient(admissionId, patientName) {
+    if (!confirm(`⚠️ Discharge patient "${patientName}"?\n\nThis will:\n• Mark admission as DISCHARGED\n• Complete the associated emergency record\n• Update patient status`)) return;
+
+    const btn = document.getElementById(`discharge-btn-${admissionId}`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Processing...'; }
+
+    fetch('/api/hospital/patient/discharge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admission_id: admissionId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`✅ Patient <strong>"${patientName}"</strong> discharged successfully.`, 'rgba(16,185,129,0.4)');
+            const row = document.getElementById(`adm-row-${admissionId}`);
+            if (row) {
+                row.cells[8].innerHTML = `<span class="badge" style="background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.4);"><i class="fa fa-circle-check me-1" style="font-size:0.6rem;"></i>DISCHARGED</span>`;
+                const now = new Date().toLocaleString('en-IN');
+                if (btn) { btn.outerHTML = `<span class="text-muted" style="font-size:0.7rem;">Discharged ${now}</span>`; }
+            }
+        } else {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-hospital-user me-1"></i>Discharge'; }
+            showToast(`⚠️ ${data.error || 'Failed to discharge.'}`, 'rgba(244,63,94,0.4)');
+        }
+    })
+    .catch(() => {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-hospital-user me-1"></i>Discharge'; }
+        showToast('⚠️ Network error.', 'rgba(244,63,94,0.4)');
+    });
+}
+
+// ─── Toggle Care Timeline ──────────────────────────────────────
+function toggleTimeline(admId) {
+    const el = document.getElementById(`timeline-${admId}`);
+    if (el) el.classList.toggle('show');
+}
+
+// ─── Delete Emergency Record ──────────────────────────────────────
+function deleteEmergency(emergencyId, emgCode) {
+    if (!confirm(`🗑️ Delete emergency record ${emgCode}?\n\nThis will permanently remove this emergency case from the active list.\nThis action cannot be undone.`)) return;
+
+    const btn = document.getElementById(`del-emg-btn-${emergencyId}`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; }
+
+    fetch('/api/hospital/emergency/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emergency_id: emergencyId, hospital_id: HOSPITAL_ID })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`🗑️ Emergency <strong>${emgCode}</strong> deleted successfully.`, 'rgba(239,68,68,0.4)');
+            const row = document.getElementById(`emg-${emergencyId}`);
+            if (row) {
+                row.style.transition = 'opacity 0.4s, transform 0.4s';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(30px)';
+                setTimeout(() => row.remove(), 400);
+            }
+        } else {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-trash-can"></i> Delete'; }
+            showToast(`⚠️ ${data.error || 'Could not delete record. Try again.'}`, 'rgba(244,63,94,0.4)');
+        }
+    })
+    .catch(() => {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-trash-can"></i> Delete'; }
+        showToast('⚠️ Network error. Please try again.', 'rgba(244,63,94,0.4)');
+    });
+}
+
+// ─── Discharge from Active Emergency (before admission) ────────────
+function dischargeEmergency(emergencyId, driverName) {
+    if (!confirm(`⚠️ Discharge "${driverName}" from active emergency?\n\nThis marks the case as resolved without formal admission.\nUse this if patient is treated and leaving safely.`)) return;
+
+    const btn = document.getElementById(`emg-discharge-btn-${emergencyId}`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Processing...'; }
+
+    fetch('/api/hospital/emergency/discharge-direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emergency_id: emergencyId, hospital_id: HOSPITAL_ID })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`✅ Patient <strong>${driverName}</strong> discharged from emergency.`, 'rgba(16,185,129,0.4)');
+            const row = document.getElementById(`emg-${emergencyId}`);
+            if (row) {
+                row.style.transition = 'opacity 0.5s';
+                row.style.opacity = '0.4';
+                const statusTd = row.cells[6];
+                if (statusTd) statusTd.innerHTML = `<span class="badge" style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.4);font-size:0.68rem;">✅ DISCHARGED</span>`;
+                if (btn) btn.outerHTML = `<span class="text-muted" style="font-size:0.7rem;">Discharged</span>`;
+            }
+        } else {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-person-walking-arrow-right me-1"></i>Discharge'; }
+            showToast(`⚠️ ${data.error || 'Discharge failed. Try again.'}`, 'rgba(244,63,94,0.4)');
+        }
+    })
+    .catch(() => {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-person-walking-arrow-right me-1"></i>Discharge'; }
+        showToast('⚠️ Network error.', 'rgba(244,63,94,0.4)');
+    });
+}
+
+// ─── Auto-refresh active emergencies every 30s ─────────────────
+setInterval(() => {
+    fetch(window.location.href + (window.location.search ? '&_r=' : '?_r=') + Date.now())
+        .then(r => r.text())
+        .then(html => {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const nb = doc.getElementById('emg-live-body');
+            const cb = document.getElementById('emg-live-body');
+            if (nb && cb) cb.innerHTML = nb.innerHTML;
+        }).catch(() => {});
+}, 30000);
+</script>
+{% endblock %}

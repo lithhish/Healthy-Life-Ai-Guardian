@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block page_title %}Hospital Staff &amp; Ambulance Registration{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width: 700px;">
+  <div class="glass-card glow-cyan">
+    <div class="text-center mb-4">
+      <i class="fa fa-user-doctor mb-2" style="font-size:2.5rem;color:var(--color-cyan);"></i>
+      <h4 style="font-weight:700;color:var(--color-cyan);">HOSPITAL STAFF &amp; AMBULANCE REGISTRATION</h4>
+      <p class="text-secondary small">Register for Doctor, Nurse, Pharmacy, Reception, or Ambulance Driver account.</p>
+      <span class="badge bg-warning text-dark px-3 py-1" style="font-size:0.75rem;"><i class="fa fa-clock me-1"></i> Account requires Reception/Admin approval after OTP verification</span>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger border-danger text-white bg-transparent mb-4" role="alert">
+      <i class="fas fa-circle-exclamation me-2"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    <form action="#" onsubmit="submitStaffReg(event)" class="form-glass" id="staff-reg-form">
+      <h5 class="mb-3 text-cyan border-bottom pb-2" style="font-size:1rem;"><i class="fa fa-hospital me-2"></i>Hospital &amp; Role Selection</h5>
+      <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+          <label for="sub_role" class="form-label">Staff Role <span class="text-danger">*</span></label>
+          <select class="form-select" id="sub_role" name="sub_role" onchange="toggleStaffFields()" required>
+            <option value="">Select Role</option>
+            <option value="doctor">Doctor</option>
+            <option value="nurse">Nursing Staff</option>
+            <option value="pharmacy">Pharmacy Staff</option>
+            <option value="reception">Reception Staff</option>
+            <option value="ambulance_driver">Ambulance Driver</option>
+          </select>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <label for="hospital_id" class="form-label">Affiliated Hospital <span class="text-danger">*</span></label>
+          <select class="form-select" id="hospital_id" name="hospital_id" required>
+            <option value="">Select Hospital</option>
+            {% for hosp in hospitals %}
+            <option value="{{ hosp.id }}">{{ hosp.name }} ({{ hosp.address }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <h5 class="mb-3 text-cyan border-bottom pb-2" style="font-size:1rem;"><i class="fa fa-mobile-screen me-2"></i>Mobile Number &amp; OTP Verification</h5>
+      <div class="row mb-4 align-items-end">
+        <div class="col-md-5 mb-2">
+          <label for="phone" class="form-label">Mobile Phone Number <span class="text-danger">*</span></label>
+          <input type="tel" class="form-control" id="phone" name="phone" placeholder="+91 9000100010" required>
+        </div>
+        <div class="col-md-3 mb-2">
+          <button type="button" class="btn btn-outline-warning w-100" onclick="requestOTP('staff_reg')">
+            <i class="fa fa-paper-plane me-1"></i> Send OTP
+          </button>
+        </div>
+        <div class="col-md-4 mb-2">
+          <label for="otp_code" class="form-label">Enter 6-Digit OTP</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="otp_code" name="otp_code" placeholder="123456" maxlength="6" required>
+            <button type="button" class="btn btn-success" onclick="confirmOTP('staff_reg')">Verify</button>
+          </div>
+        </div>
+        <div class="col-12" id="otp-status-msg"></div>
+      </div>
+
+      <h5 class="mb-3 text-cyan border-bottom pb-2" style="font-size:1rem;"><i class="fa fa-key me-2"></i>Account Security</h5>
+      <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+          <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="username" name="username" placeholder="e.g. dr_clara" required>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
+          <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+      </div>
+
+      <h5 class="mb-3 text-cyan border-bottom pb-2" style="font-size:1rem;"><i class="fa fa-id-card me-2"></i>Profile Details</h5>
+      <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+          <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="name" name="name" placeholder="e.g. Dr. Clara / Nurse Sarah" required>
+        </div>
+        <div class="col-md-6 mb-3" id="specialty-group">
+          <label for="specialty" class="form-label">Specialty / Department</label>
+          <input type="text" class="form-control" id="specialty" name="specialty" placeholder="e.g. Cardiology, Emergency, Pediatrics">
+        </div>
+        <div class="col-md-6 mb-3" id="qualification-group">
+          <label for="qualification" class="form-label">Qualification / Reg No</label>
+          <input type="text" class="form-control" id="qualification" name="qualification" placeholder="e.g. MBBS, MD, B.Sc Nursing">
+        </div>
+        <div class="col-md-6 mb-3 d-none" id="vehicle-group">
+          <label for="vehicle_number" class="form-label">Ambulance Vehicle Number</label>
+          <input type="text" class="form-control" id="vehicle_number" name="vehicle_number" placeholder="e.g. TN-33-AA-1111">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-neon w-100 py-2.5 mt-2">
+        <i class="fas fa-user-plus me-2"></i> Submit Registration for Approval
+      </button>
+    </form>
+
+    <div class="text-center mt-4">
+      <p class="mb-0 text-secondary" style="font-size:0.85rem;">
+        Already registered? <a href="{{ url_for('auth.login', role='staff') }}" style="color:var(--color-cyan);text-decoration:none;">Login Here</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+function toggleStaffFields() {
+  const role = document.getElementById('sub_role').value;
+  const vehicleGroup = document.getElementById('vehicle-group');
+  if (role === 'ambulance_driver') {
+    vehicleGroup.classList.remove('d-none');
+  } else {
+    vehicleGroup.classList.add('d-none');
+  }
+}
+
+function requestOTP(purpose) {
+  const phone = document.getElementById('phone').value.trim();
+  const msgDiv = document.getElementById('otp-status-msg');
+
+  if (!phone) {
+    alert('Please enter your mobile phone number.');
+    return;
+  }
+
+  fetch('/api/otp/send', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ phone, purpose })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      msgDiv.innerHTML = `<div class="alert alert-success mt-2 py-2 small"><i class="fa fa-circle-check me-1"></i> ${data.message} <strong>(OTP Simulation Code: ${data.otp_code})</strong></div>`;
+      document.getElementById('otp_code').value = data.otp_code;
+    } else {
+      msgDiv.innerHTML = `<div class="alert alert-danger mt-2 py-2 small"><i class="fa fa-triangle-exclamation me-1"></i> ${data.message}</div>`;
+    }
+  });
+}
+
+function confirmOTP(purpose) {
+  const phone = document.getElementById('phone').value.trim();
+  const otp_code = document.getElementById('otp_code').value.trim();
+  const msgDiv = document.getElementById('otp-status-msg');
+
+  if (!phone || !otp_code) {
+    alert('Please enter phone number and OTP code.');
+    return;
+  }
+
+  fetch('/api/otp/verify', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ phone, otp_code, purpose })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      msgDiv.innerHTML = `<div class="alert alert-success mt-2 py-2 small"><i class="fa fa-shield-check me-1"></i> ✅ OTP Verified Successfully!</div>`;
+    } else {
+      msgDiv.innerHTML = `<div class="alert alert-danger mt-2 py-2 small"><i class="fa fa-circle-xmark me-1"></i> ${data.message}</div>`;
+    }
+  });
+}
+
+function submitStaffReg(event) {
+  event.preventDefault();
+  const form = document.getElementById('staff-reg-form');
+  const formData = new FormData(form);
+  
+  // Convert formData to URLSearchParams to send as application/x-www-form-urlencoded
+  const params = new URLSearchParams();
+  for (const pair of formData) {
+      params.append(pair[0], pair[1]);
+  }
+  // Mapping 'sub_role' to 'role' for the backend
+  params.set('role', formData.get('sub_role'));
+
+  fetch('/api/hospital/register_staff', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success) {
+      alert("Registration successful! Pending Admin Approval.");
+      window.location.href = "{{ url_for('auth.login', role='staff') }}";
+    } else {
+      alert("Error: " + data.error);
+    }
+  })
+  .catch(err => {
+    alert("An error occurred during registration. Please check console.");
+    console.error(err);
+  });
+}
+</script>
+{% endblock %}
+{% endblock %}

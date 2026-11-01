@@ -1,0 +1,738 @@
+{% extends "base.html" %}
+
+{% block title %}Ambulance Command Center — Emergency Response{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  .amb-hero {
+    background: linear-gradient(135deg, rgba(239,68,68,0.18) 0%, rgba(15,23,42,0.95) 50%, rgba(6,182,212,0.1) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px);
+  }
+  .emergency-card {
+    border-left: 5px solid #ef4444;
+    animation: borderPulse 1.5s ease-in-out infinite;
+    background: rgba(15, 23, 42, 0.85);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+  @keyframes borderPulse {
+    0%, 100% { border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+    50% { border-color: #f59e0b; box-shadow: 0 0 25px rgba(245, 158, 11, 0.5); }
+  }
+  .vital-chip {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 0.8rem;
+    margin: 3px;
+  }
+  .btn-accept { background: linear-gradient(135deg, #10b981, #059669); border: none; color: #fff; font-weight: 700; }
+  .btn-accept:hover { background: linear-gradient(135deg, #059669, #047857); color: #fff; transform: translateY(-1px); }
+  .btn-reject { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444; font-weight: 600; }
+  .btn-reject:hover { background: #ef4444; color: #fff; }
+  .status-badge-available { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+  .status-badge-dispatched { background: rgba(239, 68, 68, 0.2); color: #fb7185; border: 1px solid rgba(239, 68, 68, 0.4); }
+  
+  .emergency-alert-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    background: #7f1d1d;
+    border: 2px solid #ef4444;
+    color: #fff;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.6);
+    display: none;
+    animation: slideInDown 0.4s ease-out;
+  }
+  @keyframes slideInDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <!-- INCOMING DISPATCH ALERT TOAST NOTIFICATION -->
+  <div id="dispatch-alert-toast" class="emergency-alert-toast">
+    <div class="d-flex align-items-center gap-3">
+      <i class="fa fa-triangle-exclamation fs-2 text-warning animate-bounce"></i>
+      <div>
+        <h6 class="mb-0 fw-bold text-white"><i class="fa fa-bell me-1"></i> URGENT AMBULANCE DISPATCH ALERT</h6>
+        <p class="mb-0 small text-white-50" id="toast-message">Medical emergency detected! Immediate response requested.</p>
+      </div>
+      <button class="btn btn-sm btn-light ms-auto fw-bold" onclick="location.reload()">VIEW NOW</button>
+    </div>
+  </div>
+
+  <!-- HERO HEADER -->
+  <div class="amb-hero mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge bg-danger text-white px-3 py-1 rounded-pill"><i class="fa fa-ambulance me-1"></i> RESPONSE UNIT</span>
+          <span class="badge bg-success bg-opacity-20 text-success border border-success px-3 py-1 rounded-pill"><i class="fa fa-wifi me-1"></i> LIVE GPS CONNECTED</span>
+        </div>
+        <h2 class="text-white fw-bold mb-1 fs-3">
+          <i class="fa fa-truck-medical text-danger me-2"></i>AMBULANCE COMMAND CENTER
+        </h2>
+        {% if ambulance %}
+        <p class="text-secondary small mb-0">
+          Unit Vehicle: <strong class="text-cyan font-monospace fs-6">{{ ambulance.vehicle_number }}</strong> &nbsp;|&nbsp;
+          Assigned Driver: <strong class="text-white">{{ ambulance.driver_name }}</strong> &nbsp;|&nbsp;
+          Phone: <strong class="text-white-50">{{ ambulance.driver_phone or '+91 9943064577' }}</strong>
+        </p>
+        {% endif %}
+      </div>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-cyan px-3 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#profileModal">
+          <i class="fa fa-user-gear me-1"></i> Edit Driver Profile
+        </button>
+        {% if ambulance %}
+        <button class="btn btn-sm {% if ambulance.status|upper in ['AVAILABLE', 'ACTIVE', 'IDLE'] %}btn-outline-success{% else %}btn-outline-danger{% endif %} px-3 py-2 fw-semibold" onclick="toggleAmbulanceStatus()">
+          <i class="fa fa-power-off me-1"></i> Unit Status: {{ ambulance.status }}
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- LEFT COLUMN: ACTIVE EMERGENCY ALERTS & LIVE MAP -->
+    <div class="col-xl-8">
+      <div class="glass-card mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="mb-0 fw-bold text-danger">
+            <i class="fa fa-circle-exclamation me-2"></i>ACTIVE DISPATCH ALERTS
+          </h4>
+          <span class="badge bg-danger px-3 py-2 rounded-pill fs-6" id="active-count">{{ active_emergencies|length }} Active</span>
+        </div>
+
+        {% if active_emergencies %}
+          {% for em in active_emergencies %}
+          <div class="emergency-card mb-3 p-3" id="emergency-card-{{ em.id }}">
+            <div class="row align-items-start g-3">
+              <div class="col-md-8">
+                <div class="d-flex align-items-center mb-2 flex-wrap gap-2">
+                  <span class="badge bg-danger fs-6">{{ em.severity }}</span>
+                  <strong class="text-white h5 mb-0">{{ em.prediction }}</strong>
+                  <span class="badge bg-indigo bg-opacity-30 text-indigo border border-indigo">
+                    {% set r_score = em.risk_percentage if em.risk_percentage is defined and em.risk_percentage else (em.confidence * 100 if em.confidence and em.confidence <= 1.0 else (em.confidence if em.confidence else 90.0)) %}
+                    {{ r_score|round(1) }}% Risk Score
+                  </span>
+                </div>
+
+                <div class="mb-2">
+                  <span class="text-secondary small">Patient Driver: </span>
+                  <strong class="text-white fs-6">{{ em.driver_name }}</strong>
+                  <span class="badge bg-dark border border-cyan text-cyan font-monospace ms-2">{{ em.driver_id_code|default('DRV-000101') }}</span>
+                  <span class="text-secondary small ms-2">Age {{ em.age|default(28) }} | Blood {{ em.blood_group|default('O+') }}</span>
+                </div>
+
+                <div class="vital-row mb-2">
+                  <span class="vital-chip text-emerald"><i class="fa fa-hospital me-1"></i> Destination: {{ em.hospital_name or 'Lotus Hospital & Research Centre' }}</span>
+                  {% if em.driver_lat %}
+                  <a href="https://maps.google.com/?q={{ em.driver_lat }},{{ em.driver_lng }}" target="_blank" class="vital-chip text-cyan">
+                    <i class="fa fa-map-pin me-1"></i> GPS Coordinates ({{ em.driver_lat|round(4) }}, {{ em.driver_lng|round(4) }})
+                  </a>
+                  {% endif %}
+                  {% if em.driver_phone %}
+                  <span class="vital-chip text-white"><i class="fa fa-phone me-1"></i> Call Patient: {{ em.driver_phone }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="small text-secondary">
+                  <i class="fa fa-clock me-1"></i> Alert Logged: {{ em.timestamp|local_time }}
+                </div>
+
+                <!-- Emergency Journey Timeline -->
+                <div class="mt-3">
+                  <h6 class="text-cyan small fw-bold mb-2"><i class="fa fa-route me-1"></i>LIVE DISPATCH TIMELINE</h6>
+                  <div class="d-flex flex-column gap-1 border-start border-secondary ps-3 ms-2 text-white-50 small" id="timeline-events-{{ em.id }}">
+                    {% if em.timeline %}
+                      {% for item in em.timeline %}
+                      <div>
+                        <span class="badge bg-dark border border-secondary text-cyan font-monospace me-1">
+                          {{ item.timestamp }}
+                        </span>
+                        <strong class="text-white me-1">{{ item.step }}:</strong>
+                        <span>{{ item.detail }}</span>
+                      </div>
+                      {% endfor %}
+                    {% else %}
+                      <div class="text-muted italic">Timeline initialized...</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- ACTION LIFECYCLE BUTTONS -->
+              <div class="col-md-4">
+                <div class="d-grid gap-2" id="amb-action-group-{{ em.id }}">
+                  {% set status_upper = em.status|upper %}
+
+                  {# Check if THIS driver is the assigned ambulance for this emergency #}
+                  {% set is_assigned = (
+                      (em.accepted_ambulance_id and em.accepted_ambulance_id == my_amb_id) or
+                      (em.ambulance_id and em.ambulance_id == my_amb_id) or
+                      (not em.accepted_ambulance_id and not em.ambulance_id)
+                  ) %}
+
+                  {% if status_upper in ['ACTIVE', 'DISPATCHING', 'AMBULANCE_REQUESTED', 'AMBULANCE_SEARCHING', 'REQUESTED', 'PENDING'] %}
+                    {# Any unassigned call can be accepted by any driver #}
+                    <button class="btn btn-accept btn-sm py-2" onclick="triggerLifecycleEndpoint({{ em.id }}, 'accept')">
+                      <i class="fa fa-check-circle me-1"></i> [ACCEPT] Dispatch Request
+                    </button>
+                    <button class="btn btn-reject btn-sm py-1" onclick="triggerLifecycleEndpoint({{ em.id }}, 'reject')">
+                      <i class="fa fa-circle-xmark me-1"></i> [REJECT] Decline Request
+                    </button>
+
+                  {% elif status_upper in ['ACCEPTED', 'AMBULANCE_DISPATCHED'] %}
+                    {% if is_assigned %}
+                    <button class="btn btn-primary btn-sm py-2" onclick="triggerLifecycleEndpoint({{ em.id }}, 'start-patient')">
+                      <i class="fa fa-route me-1"></i> Start to Patient Location
+                    </button>
+                    {% else %}
+                    <span class="badge bg-secondary px-3 py-2 w-100 text-start">
+                      <i class="fa fa-lock me-1"></i> Assigned to another driver
+                    </span>
+                    {% endif %}
+
+                  {% elif status_upper == 'EN_ROUTE_TO_PATIENT' %}
+                    {% if is_assigned %}
+                    <button class="btn btn-sm btn-info text-dark mb-1 fw-bold" onclick="triggerLifecycleEndpoint({{ em.id }}, 'arrive-patient')">
+                      <i class="fa fa-location-dot me-1"></i> Arrived at Patient Location
+                    </button>
+                    <button class="btn btn-sm btn-outline-cyan" onclick="startMovementSimulation({{ em.id }}, 'patient', {{ em.driver_lat|default(11.272) }}, {{ em.driver_lng|default(77.592) }})">
+                      <i class="fa fa-play me-1"></i> Simulate GPS Movement
+                    </button>
+                    {% else %}
+                    <span class="badge bg-secondary px-3 py-2 w-100 text-start">
+                      <i class="fa fa-lock me-1"></i> En route — assigned driver only
+                    </span>
+                    {% endif %}
+
+                  {% elif status_upper == 'ARRIVED_AT_PATIENT' %}
+                    {% if is_assigned %}
+                    <button class="btn btn-success btn-sm py-2 fw-bold" onclick="triggerLifecycleEndpoint({{ em.id }}, 'pickup')">
+                      <i class="fa fa-person-shelter me-1"></i> Pick Up Patient
+                    </button>
+                    {% else %}
+                    <span class="badge bg-secondary px-3 py-2 w-100 text-start">
+                      <i class="fa fa-lock me-1"></i> Arrived — assigned driver only
+                    </span>
+                    {% endif %}
+
+                  {% elif status_upper == 'PATIENT_PICKED_UP' %}
+                    {% if is_assigned %}
+                    <button class="btn btn-primary btn-sm py-2" onclick="triggerLifecycleEndpoint({{ em.id }}, 'start-hospital')">
+                      <i class="fa fa-hospital me-1"></i> Start to Destination Hospital
+                    </button>
+                    {% else %}
+                    <span class="badge bg-secondary px-3 py-2 w-100 text-start">
+                      <i class="fa fa-lock me-1"></i> Patient picked up — assigned driver only
+                    </span>
+                    {% endif %}
+
+                  {% elif status_upper == 'EN_ROUTE_TO_HOSPITAL' %}
+                    {% if is_assigned %}
+                    <button class="btn btn-sm btn-warning text-dark mb-1 fw-bold" onclick="triggerLifecycleEndpoint({{ em.id }}, 'arrive-hospital')">
+                      <i class="fa fa-hospital-user me-1"></i> Arrived at Hospital
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" onclick="startMovementSimulation({{ em.id }}, 'hospital', {{ em.hosp_lat|default(11.341) }}, {{ em.hosp_lng|default(77.717) }})">
+                      <i class="fa fa-play me-1"></i> Simulate Movement to Hospital
+                    </button>
+                    {% else %}
+                    <span class="badge bg-secondary px-3 py-2 w-100 text-start">
+                      <i class="fa fa-lock me-1"></i> En route to hospital — assigned driver only
+                    </span>
+                    {% endif %}
+
+                  {% elif status_upper == 'ARRIVED_AT_HOSPITAL' %}
+                    {% if is_assigned %}
+                    <button class="btn btn-sm btn-danger py-2 fw-bold" onclick="triggerLifecycleEndpoint({{ em.id }}, 'handover')">
+                      <i class="fa fa-heart-pulse me-1"></i> Confirm Hospital Handover
+                    </button>
+                    {% else %}
+                    <span class="badge bg-secondary px-3 py-2 w-100 text-start">
+                      <i class="fa fa-lock me-1"></i> Handover — assigned driver only
+                    </span>
+                    {% endif %}
+
+                  {% elif status_upper == 'HANDOVER_COMPLETED' %}
+                    {% if is_assigned %}
+                    <button class="btn btn-sm btn-success py-2 fw-bold" onclick="triggerLifecycleEndpoint({{ em.id }}, 'complete')">
+                      <i class="fa fa-flag-checkered me-1"></i> Complete Emergency
+                    </button>
+                    {% else %}
+                    <span class="badge bg-secondary px-3 py-2 w-100 text-start">
+                      <i class="fa fa-lock me-1"></i> Complete — assigned driver only
+                    </span>
+                    {% endif %}
+                  {% endif %}
+
+                  {% if em.driver_lat and em.driver_lng %}
+                  <a href="https://www.google.com/maps/dir/?api=1&destination={{ em.driver_lat }},{{ em.driver_lng }}&travelmode=driving"
+                     target="_blank" class="btn btn-sm btn-outline-warning">
+                    <i class="fa fa-map-location-dot me-1"></i> Turn-by-Turn GPS Nav
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-5 text-secondary">
+            <i class="fa fa-circle-check text-success mb-3" style="font-size:3.5rem;"></i>
+            <h5 class="text-white fw-bold mb-1">No Active Emergency Dispatches</h5>
+            <p class="small text-secondary mb-0">System is continuously listening for real-time driver emergency alerts.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- LIVE AMBULANCE GPS MAP -->
+      <div class="glass-card">
+        <h5 class="text-cyan mb-3 fw-bold"><i class="fa fa-map-location-dot me-2"></i>Live Ambulance GPS & Route Navigation Map</h5>
+        <div id="ambulance-map" style="height: 350px; width: 100%; border-radius: 12px; border: 1px solid rgba(6,182,212,0.4);"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: FLEET STATUS & HISTORY -->
+    <div class="col-xl-4">
+      <!-- FLEET STATUS CARD -->
+      <div class="glass-card mb-4">
+        <h5 class="text-cyan mb-3 fw-bold"><i class="fa fa-id-card me-2"></i>Ambulance Unit Information</h5>
+        {% if ambulance %}
+        <div class="row g-3">
+          <div class="col-6">
+            <span class="text-secondary small text-uppercase">Vehicle Number</span>
+            <div class="text-white font-monospace fw-bold fs-6">{{ ambulance.vehicle_number }}</div>
+          </div>
+          <div class="col-6">
+            <span class="text-secondary small text-uppercase">Status</span>
+            <div><span class="badge {% if ambulance.status|upper in ['AVAILABLE', 'ACTIVE', 'IDLE'] %}bg-success{% else %}bg-danger{% endif %} px-2 py-1">{{ ambulance.status }}</span></div>
+          </div>
+          <div class="col-6">
+            <span class="text-secondary small text-uppercase">Driver Name</span>
+            <div class="text-white fw-semibold">{{ ambulance.driver_name }}</div>
+          </div>
+          <div class="col-6">
+            <span class="text-secondary small text-uppercase">Contact Phone</span>
+            <div class="text-cyan fw-semibold">{{ ambulance.driver_phone or '+91 9943064577' }}</div>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-outline-cyan w-100 mt-3 fw-semibold" onclick="toggleAmbulanceStatus()">
+          <i class="fa fa-sync me-1"></i> Toggle Unit Availability Status
+        </button>
+        {% else %}
+        <p class="text-secondary small mb-0">No specific ambulance unit linked. Logged in as Driver Account.</p>
+        {% endif %}
+      </div>
+
+      <!-- RESPONSE HISTORY -->
+      <div class="glass-card">
+        <h5 class="text-cyan mb-3 fw-bold"><i class="fa fa-history me-2"></i>Completed Response History</h5>
+        {% if history %}
+          <div class="d-flex flex-column gap-2">
+          {% for h in history[:6] %}
+            <div class="p-2 rounded bg-dark border border-secondary">
+              <div class="d-flex justify-content-between align-items-center">
+                <strong class="text-white small">{{ h.prediction or 'Medical Dispatch' }}</strong>
+                <span class="badge bg-success small">Completed</span>
+              </div>
+              <div class="text-secondary small">Patient: {{ h.driver_name }} | {{ h.timestamp }}</div>
+            </div>
+          {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-4 text-secondary">
+            <i class="fa fa-clock-rotate-left mb-2 fs-3"></i>
+            <p class="small mb-0">No past emergency response history logged.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT DRIVER PROFILE MODAL -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-cyan"><i class="fa fa-user-pen me-2"></i>Edit Ambulance Driver Profile</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="amb-self-profile-form">
+          <div class="mb-3">
+            <label class="form-label text-secondary small">Account Username *</label>
+            <input type="text" class="form-control bg-dark text-white border-secondary" name="username" value="{{ session.get('username','') }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-secondary small">Driver Full Name *</label>
+            <input type="text" class="form-control bg-dark text-white border-secondary" name="name" value="{{ session.get('name','') }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-secondary small">Contact Phone Number</label>
+            <input type="text" class="form-control bg-dark text-white border-secondary" name="phone" value="{{ ambulance.driver_phone if ambulance else '' }}" placeholder="+91 9943064577">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-secondary small">Ambulance Vehicle Number</label>
+            <input type="text" class="form-control bg-dark text-white border-secondary" name="vehicle_number" value="{{ ambulance.vehicle_number if ambulance else '' }}" placeholder="TN-33-AMB-108">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-secondary small">Update Password (Leave empty to keep current)</label>
+            <input type="password" class="form-control bg-dark text-white border-secondary" name="password" placeholder="••••••••">
+          </div>
+          <button type="button" class="btn btn-cyan w-100 fw-bold" onclick="saveAmbProfile()">Save Profile Updates</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+let map, ambulanceMarker, routeLine, routePoints = [];
+let currentAmbLat = {{ ambulance.latitude or 11.2800 }};
+let currentAmbLng = {{ ambulance.longitude or 77.5900 }};
+let simulationInterval = null;
+
+document.addEventListener("DOMContentLoaded", function() {
+    initAmbulanceLiveMap();
+    {% if active_emergencies %}
+      {% for em in active_emergencies %}
+        loadLiveTimeline({{ em.id }});
+      {% endfor %}
+    {% endif %}
+    setupRealtimeEventListeners();
+});
+
+// WEB AUDIO SIREN SOUND & ALERTS
+function playEmergencySiren() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.4);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.8);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 1.6);
+    } catch(e) {
+        console.log("Audio alert playback notice:", e);
+    }
+}
+
+function showEmergencyAlertToast(data) {
+    const toast = document.getElementById('dispatch-alert-toast');
+    const msgEl = document.getElementById('toast-message');
+    if (toast && msgEl) {
+        const driverName = data.driver_name || data.driver || 'Patient';
+        const type = data.emergency_type || data.prediction || 'Critical Emergency';
+        msgEl.innerText = `🚨 DISPATCH ALERT: ${driverName} (${type}). Immediate ambulance pickup required!`;
+        toast.style.display = 'block';
+    }
+    playEmergencySiren();
+}
+
+function setupRealtimeEventListeners() {
+    // 1. WebSocket Listener
+    if (typeof io !== 'undefined') {
+        const socket = io();
+        socket.on('emergency_created', function(data) {
+            showEmergencyAlertToast(data);
+            setTimeout(() => location.reload(), 3000);
+        });
+        socket.on('ambulance_requested', function(data) {
+            showEmergencyAlertToast(data);
+            setTimeout(() => location.reload(), 3000);
+        });
+    }
+
+    // 2. Server-Sent Events (SSE) Stream Listener
+    if (!!window.EventSource) {
+        const source = new EventSource('/api/events/stream');
+        source.onmessage = function(e) {
+            try {
+                const eventData = JSON.parse(e.data);
+                if (['EMERGENCY_TRIGGERED', 'AMBULANCE_REQUESTED', 'EMERGENCY_CREATED'].includes(eventData.event)) {
+                    showEmergencyAlertToast(eventData.data || eventData);
+                    setTimeout(() => location.reload(), 3000);
+                }
+            } catch(err){}
+        };
+    }
+}
+
+function loadLiveTimeline(emergencyId) {
+    fetch(`/api/emergency/${emergencyId}/timeline`)
+    .then(r => r.json())
+    .then(data => {
+        if (data.success && data.timeline) {
+            const container = document.getElementById(`timeline-events-${emergencyId}`);
+            if (!container) return;
+            container.innerHTML = '';
+            if (data.timeline.length === 0) {
+                container.innerHTML = '<div class="text-muted italic">No timeline steps recorded yet.</div>';
+                return;
+            }
+            data.timeline.forEach(item => {
+                const stepName = item.step.replace(/_/g, ' ').toUpperCase();
+                const timeStr = item.timestamp ? (item.timestamp.split('T')[1]?.substring(0,8) || item.timestamp) : 'Now';
+                container.innerHTML += `
+                    <div class="mb-1 text-white">
+                        <span class="badge bg-secondary font-monospace" style="font-size:0.75rem;">${timeStr}</span>
+                        <strong class="text-info ms-1">${stepName}:</strong>
+                        <span class="text-secondary ms-1">${item.detail}</span>
+                    </div>
+                `;
+            });
+        }
+    });
+}
+
+function initAmbulanceLiveMap() {
+    const container = document.getElementById('ambulance-map');
+    if (!container) return;
+    map = L.map('ambulance-map').setView([currentAmbLat, currentAmbLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+    setTimeout(() => { map.invalidateSize(); }, 400);
+
+    const ambulanceIcon = L.divIcon({
+        html: '<div style="background-color: #ef4444; width: 26px; height: 26px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 12px #ef4444; display: flex; align-items: center; justify-content: center;"><i class="fa fa-ambulance" style="color: white; font-size: 11px;"></i></div>',
+        className: 'ambulance-marker-icon',
+        iconSize: [26, 26]
+    });
+    ambulanceMarker = L.marker([currentAmbLat, currentAmbLng], { icon: ambulanceIcon }).addTo(map).bindPopup("🚑 <strong>Ambulance Unit</strong>");
+
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                currentAmbLat = lat;
+                currentAmbLng = lng;
+                if (ambulanceMarker) ambulanceMarker.setLatLng([lat, lng]);
+                map.setView([lat, lng], map.getZoom());
+                updateAmbulanceLocationOnBackend(lat, lng);
+            },
+            (error) => { console.warn("Browser GPS warning:", error); },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+        );
+    }
+
+    {% if active_emergencies %}
+      {% set latest_em = active_emergencies[0] %}
+      const patLat = {{ latest_em.driver_lat or 11.2720 }};
+      const patLng = {{ latest_em.driver_lng or 77.5920 }};
+      const hospLat = {{ latest_em.hosp_lat or 11.3410 }};
+      const hospLng = {{ latest_em.hosp_lng or 77.7170 }};
+      const acceptedHospId = {{ latest_em.accepted_hospital_id or 'null' }};
+      const status = "{{ latest_em.status|upper }}";
+      
+      const patMarker = L.marker([patLat, patLng]).addTo(map).bindPopup("🚨 <strong>Patient Location</strong>");
+      
+      if (acceptedHospId) {
+          const hospMarker = L.marker([hospLat, hospLng]).addTo(map).bindPopup("🏥 <strong>Destination Hospital (ACCEPTED)</strong>: {{ latest_em.hospital_name }}");
+          if (status === 'EN_ROUTE_TO_PATIENT') {
+              routePoints = [[currentAmbLat, currentAmbLng], [patLat, patLng]];
+          } else if (status === 'EN_ROUTE_TO_HOSPITAL' || status === 'PATIENT_PICKED_UP') {
+              routePoints = [[currentAmbLat, currentAmbLng], [hospLat, hospLng]];
+          } else {
+              routePoints = [[currentAmbLat, currentAmbLng], [patLat, patLng], [hospLat, hospLng]];
+          }
+      } else {
+          // STATE 1 & 2: Hospital request sent, destination waiting for hospital acceptance
+          routePoints = [[currentAmbLat, currentAmbLng], [patLat, patLng]];
+      }
+      
+      routeLine = L.polyline(routePoints, {color: '#00f3ff', weight: 4, dashArray: '6, 6'}).addTo(map);
+      map.fitBounds(routeLine.getBounds());
+    {% endif %}
+}
+
+function triggerLifecycleEndpoint(emergencyId, action) {
+  let url = `/api/ambulance/emergency/${emergencyId}/${action}`;
+  if (action === 'accept') {
+    url = `/api/ambulance/accept-emergency`;
+  }
+  
+  fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ emergency_id: emergencyId })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success || data.status) {
+      location.reload();
+    } else {
+      console.error(data.error || data.message);
+    }
+  })
+  .catch(err => {
+     console.error("Connection issue. Retry action.", err);
+  });
+}
+
+function toggleAmbulanceStatus() {
+    fetch('/api/ambulance/toggle-status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`✅ ${data.message}`);
+            location.reload();
+        } else {
+            alert(`⚠️ ${data.message || data.error}`);
+        }
+    });
+}
+
+function startMovementSimulation(emergencyId, targetType, destLat, destLng) {
+    if (simulationInterval) clearInterval(simulationInterval);
+    let steps = 10;
+    let currentStep = 0;
+    const dLat = (destLat - currentAmbLat) / steps;
+    const dLng = (destLng - currentAmbLng) / steps;
+    alert(`GPS Simulation Active: Moving to ${targetType} coordinates.`);
+    
+    simulationInterval = setInterval(() => {
+        if (currentStep >= steps) {
+            clearInterval(simulationInterval);
+            currentAmbLat = destLat;
+            currentAmbLng = destLng;
+            if (ambulanceMarker) ambulanceMarker.setLatLng([currentAmbLat, currentAmbLng]);
+            updateAmbulanceLocationOnBackend(currentAmbLat, currentAmbLng);
+            alert("GPS Simulation Complete: Target coordinates reached.");
+            return;
+        }
+        currentAmbLat += dLat;
+        currentAmbLng += dLng;
+        if (ambulanceMarker) {
+            ambulanceMarker.setLatLng([currentAmbLat, currentAmbLng]);
+            if (routeLine) {
+                routeLine.setLatLngs([[currentAmbLat, currentAmbLng], [destLat, destLng]]);
+            }
+        }
+        updateAmbulanceLocationOnBackend(currentAmbLat, currentAmbLng);
+        currentStep++;
+    }, 1500);
+}
+
+function updateAmbulanceLocationOnBackend(lat, lng) {
+    fetch('/ambulance/update-location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude: lat, longitude: lng })
+    })
+    .then(r => r.json())
+    .then(data => { console.log("Telemetry Sync:", data); });
+}
+
+// Live Real-Time Event Listener & Auto-Refresh for Ambulance Drivers
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Socket.IO connection
+    if (typeof io !== 'undefined') {
+        const socket = io();
+        socket.on('connect', () => { console.log("⚡ Live Ambulance Command Socket connected."); });
+        socket.on('emergency_created', (data) => {
+            console.log("🚨 New Emergency Broadcast:", data);
+            playAlertSound();
+            setTimeout(() => { location.reload(); }, 1000);
+        });
+        socket.on('ambulance_requested', (data) => {
+            console.log("🚑 Ambulance Request Broadcast:", data);
+            playAlertSound();
+            setTimeout(() => { location.reload(); }, 1000);
+        });
+        socket.on('hospital_accepted', (data) => {
+            console.log("🏥 Hospital Accepted Emergency Broadcast:", data);
+            setTimeout(() => { location.reload(); }, 1000);
+        });
+    }
+
+    // 2. Auto-polling fallback (checks for new alerts every 6 seconds)
+    setInterval(() => {
+        fetch('/api/ambulance/requests')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.requests) {
+                    const currentCount = document.querySelectorAll('.card.border-danger, .card.bg-dark').length;
+                    if (data.requests.length > currentCount) {
+                        console.log("🔔 New emergency alert detected via poll!");
+                        playAlertSound();
+                        location.reload();
+                    }
+                }
+            })
+            .catch(err => {});
+    }, 6000);
+});
+
+function playAlertSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 1.5);
+    } catch(e) {}
+}
+
+function saveAmbProfile() {
+  const form = document.getElementById('amb-self-profile-form');
+  const formData = new FormData(form);
+  const json = {};
+  formData.forEach((v, k) => json[k] = v);
+
+  fetch('/api/profile/update', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(json)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      alert(`✅ ${data.message}`);
+      bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+      location.reload();
+    } else {
+      alert(`⚠️ ${data.message || data.error || "Failed to update profile"}`);
+    }
+  })
+  .catch(err => alert("⚠️ Error: " + err));
+}
+</script>
+{% endblock %}

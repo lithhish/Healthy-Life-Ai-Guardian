@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Pharmacist Portal — AI Driver Health Guardian{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-cyan mb-1" style="font-weight: 800;"><i class="fa-solid fa-pills me-2"></i>PHARMACY DISPENSING PORTAL</h2>
+            <p class="text-secondary small mb-0">Emergency Medication Availability, Dispensing Logs & Inventory</p>
+        </div>
+        <div>
+            <span class="badge bg-success px-3 py-2"><i class="fa fa-hospital me-1"></i> Hospital ID: {{ session.get('hospital_id', 1) }}</span>
+            <span class="badge bg-info px-3 py-2 ms-2"><i class="fa fa-user me-1"></i> {{ session.get('name', 'Pharmacist') }}</span>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-12">
+            <div class="glass-card">
+                <h5 class="text-cyan mb-3" style="font-weight: 700;"><i class="fa fa-prescription-bottle-medical me-2"></i>EMERGENCY MEDICATION STOCK</h5>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-secondary small">
+                                <th>Medicine Name</th>
+                                <th>Category</th>
+                                <th>Stock Quantity</th>
+                                <th>Availability Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Aspirin / Nitroglycerin Kit</td>
+                                <td>Cardiac Emergency</td>
+                                <td>45 units</td>
+                                <td><span class="badge bg-success">In Stock</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="alert('Emergency kit reserved.')">Reserve Emergency Kit</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Medical Oxygen Cylinder (40L)</td>
+                                <td>Respiratory Care</td>
+                                <td>18 units</td>
+                                <td><span class="badge bg-success">In Stock</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="alert('Oxygen cylinder assigned.')">Assign Oxygen</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

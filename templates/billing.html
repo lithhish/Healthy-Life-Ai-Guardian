@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block page_title %}Medical Bill — {{ bill.bill_id_code }}{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width: 850px;">
+  <div class="glass-card glow-cyan p-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center border-bottom border-cyan pb-3 mb-4">
+      <div>
+        <h3 class="text-cyan mb-1" style="font-weight: 800;"><i class="fa-solid fa-file-invoice-dollar me-2"></i>ITEMIZED MEDICAL BILL</h3>
+        <p class="text-secondary small mb-0">Official Emergency Medical & Hospital Billing Statement</p>
+      </div>
+      <div class="text-end">
+        <span class="badge bg-dark border border-cyan text-cyan fs-6 mb-1">{{ bill.bill_id_code }}</span>
+        <div class="small text-secondary">Date: {{ bill.created_at }}</div>
+      </div>
+    </div>
+
+    <!-- Patient & Hospital Info Grid -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <div class="p-3 rounded bg-dark border border-secondary">
+          <h6 class="text-cyan mb-2" style="font-size:0.9rem;"><i class="fa-solid fa-user me-2"></i>PATIENT INFORMATION</h6>
+          <div class="small text-secondary mb-1">Name: <strong class="text-white">{{ bill.patient_name }}</strong></div>
+          <div class="small text-secondary mb-1">Patient Code: <strong class="text-cyan">{{ bill.patient_id_code|default('PAT-000001') }}</strong></div>
+          <div class="small text-secondary mb-1">Diagnosis: <strong class="text-warning">{{ bill.diagnosis|default('Suspected Cardiac Emergency') }}</strong></div>
+          <div class="small text-secondary">Treatment: <span class="text-white">{{ bill.treatment|default('Emergency ICU Care & Monitoring') }}</span></div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="p-3 rounded bg-dark border border-secondary">
+          <h6 class="text-cyan mb-2" style="font-size:0.9rem;"><i class="fa-solid fa-hospital me-2"></i>HOSPITAL & CLINICAL DETAILS</h6>
+          <div class="small text-secondary mb-1">Hospital: <strong class="text-white">{{ bill.hospital_name|default('Lotus Hospital') }}</strong></div>
+          <div class="small text-secondary mb-1">Attending Physician: <strong class="text-white">{{ bill.doctor_name|default('Dr. Clara') }}</strong></div>
+          <div class="small text-secondary mb-1">Status: <span class="badge {% if bill.payment_status == 'Paid' %}bg-success{% else %}bg-warning text-dark{% endif %}">{{ bill.payment_status }}</span></div>
+          <div class="small text-secondary">Authorized By: <strong class="text-white">{{ bill.authorized_staff|default('Hospital Admin') }}</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Itemized Table -->
+    <h6 class="text-cyan mb-2" style="font-size:0.95rem;font-weight:700;"><i class="fa-solid fa-list-check me-2"></i>CHARGES BREAKDOWN</h6>
+    <div class="table-responsive mb-4">
+      <table class="table table-dark table-striped align-middle mb-0">
+        <thead>
+          <tr class="text-secondary small">
+            <th>Category</th>
+            <th>Item / Service Description</th>
+            <th class="text-center">Qty</th>
+            <th class="text-end">Unit Price (₹)</th>
+            <th class="text-end">Total Price (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if items %}
+            {% for item in items %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ item.category }}</span></td>
+              <td class="text-white fw-bold">{{ item.item_name }}</td>
+              <td class="text-center">{{ item.quantity }}</td>
+              <td class="text-end">₹{{ "%.2f"|format(item.unit_price) }}</td>
+              <td class="text-end text-cyan">₹{{ "%.2f"|format(item.total_price) }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td>Fee</td><td>Doctor Consultation Fee</td><td class="text-center">1</td><td class="text-end">₹500.00</td><td class="text-end text-cyan">₹500.00</td></tr>
+            <tr><td>Fee</td><td>Emergency Triage & ICU Setup</td><td class="text-center">1</td><td class="text-end">₹1000.00</td><td class="text-end text-cyan">₹1000.00</td></tr>
+            <tr><td>Bed</td><td>ICU Bed Charges</td><td class="text-center">1</td><td class="text-end">₹3000.00</td><td class="text-end text-cyan">₹3000.00</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Summary Box -->
+    <div class="row justify-content-end mb-4">
+      <div class="col-md-6">
+        <div class="p-3 rounded bg-dark border border-cyan">
+          <div class="d-flex justify-content-between mb-1 text-secondary small">
+            <span>Consultation & Triage Fees:</span>
+            <span class="text-white">₹{{ "%.2f"|format(bill.consultation_fee + bill.emergency_fee) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-1 text-secondary small">
+            <span>Bed & ICU Charges:</span>
+            <span class="text-white">₹{{ "%.2f"|format(bill.bed_charges + bill.icu_charges) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-1 text-secondary small">
+            <span>Diagnostics (Lab & ECG):</span>
+            <span class="text-white">₹{{ "%.2f"|format(bill.lab_charges + bill.ecg_charges) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-1 text-secondary small">
+            <span>Prescribed Medicines Subtotal:</span>
+            <span class="text-white">₹{{ "%.2f"|format(bill.medicine_subtotal) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2 text-secondary small border-bottom border-secondary pb-1">
+            <span>Tax (5% GST):</span>
+            <span class="text-white">₹{{ "%.2f"|format(bill.tax_amount) }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <strong class="text-cyan h5 mb-0">GRAND TOTAL:</strong>
+            <strong class="text-cyan h4 mb-0" style="font-family:'Share Tech Mono', monospace;">₹{{ "%.2f"|format(bill.grand_total) }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex justify-content-between align-items-center">
+      <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm"><i class="fa fa-arrow-left me-1"></i> Back</a>
+      <div>
+        <button onclick="window.print()" class="btn btn-outline-cyan btn-sm me-2"><i class="fa fa-print me-1"></i> Print Bill</button>
+        {% if bill.payment_status != 'Paid' %}
+        <button onclick="payBill('{{ bill.bill_id_code }}')" class="btn btn-neon btn-sm"><i class="fa fa-credit-card me-1"></i> Mark as Paid</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function payBill(billId) {
+  fetch(`/api/hospital/bill/${billId}/pay`, { method: 'POST' })
+  .then(r => r.json())
+  .then(data => {
+    alert("Payment successful! Status updated to Paid.");
+    location.reload();
+  });
+}
+</script>
+{% endblock %}

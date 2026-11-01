@@ -1,0 +1,14 @@
+{
+  "python.analysis.exclude": [
+    "**/.venv/**",
+    "**/__pycache__/**",
+    "**/scratch/**"
+  ],
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/scratch/**": true,
+    "**/guardian.db": true
+  },
+  "python.analysis.indexing": false
+}

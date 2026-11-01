@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ portal_title }} — AI Driver Health Guardian{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="auth-container">
+        <div class="glass-card glow-cyan" style="max-width: 480px; margin: auto;">
+            <!-- Header with Role-Specific Branding & Logo -->
+            <div class="text-center mb-4">
+                <img src="{{ url_for('static', filename='images/guardian_logo.jpg') }}" alt="AI Guardian Logo" 
+                     style="width: 72px; height: 72px; border-radius: 16px; object-fit: cover; border: 2px solid var(--color-cyan); box-shadow: 0 0 20px var(--color-cyan-glow);" class="mb-3 d-block mx-auto">
+                <h3 style="font-weight: 800; color: {{ icon_color|default('var(--color-cyan)') }}; letter-spacing: 1px;">
+                    {{ portal_title }}
+                </h3>
+                <p class="text-white-50 small mb-1" style="font-weight: 600;">{{ portal_subtitle }}</p>
+                <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0;">
+                    {{ portal_access_text|default('Authorised Personnel Only – Access is Monitored & Logged') }}
+                </p>
+            </div>
+
+            <!-- Demo Login Credentials Hint -->
+            {% if demo_hint %}
+                <div class="alert alert-dark border border-cyan text-cyan text-center mb-3 py-1.5 px-2" style="border-radius: 8px; font-size: 0.8rem; background: rgba(6,182,212,0.08);">
+                    <i class="fas fa-info-circle me-1"></i> {{ demo_hint }}
+                </div>
+            {% endif %}
+
+            <!-- Error Notification -->
+            {% if error %}
+                <div class="alert border-danger text-white mb-3" role="alert"
+                     style="background: rgba(239, 68, 68, 0.12); border: 1px solid #ef4444; border-radius: 10px; font-size: 0.88rem;">
+                    <i class="fas fa-triangle-exclamation me-2 text-danger"></i> {{ error }}
+                </div>
+            {% endif %}
+
+            <!-- Success Notification -->
+            {% if success %}
+                <div class="alert border-success text-white mb-3" role="alert"
+                     style="background: rgba(34, 197, 94, 0.12); border: 1px solid #22c55e; border-radius: 10px; font-size: 0.88rem;">
+                    <i class="fas fa-circle-check me-2 text-success"></i> {{ success }}
+                </div>
+            {% endif %}
+
+            <!-- Login Form -->
+            <form action="{{ post_url }}" method="POST" class="form-glass" id="roleLoginForm">
+                {% if hospitals or 'hospital' in post_url %}
+                <div class="mb-4 text-start">
+                    <label for="login-hospital" class="form-label text-cyan fw-bold">
+                        <i class="fas fa-hospital me-1 text-cyan"></i> Select Hospital Name *
+                    </label>
+                    <select class="form-select form-select-lg bg-dark text-white border-cyan" id="login-hospital" name="hospital_id" required autofocus style="border-width: 2px;">
+                        <option value="" disabled selected>-- Select Hospital Name ▼ --</option>
+                        {% for h in hospitals %}
+                            <option value="{{ h.id }}">{{ h.name }} ({{ h.hospital_id_code|default('HOS-' ~ '%06d'|format(h.id)) }}){% if h.city %} - {{ h.city }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text text-secondary mt-1" style="font-size:0.78rem;">
+                        <i class="fas fa-info-circle text-cyan me-1"></i> Select your hospital to open the dashboard immediately.
+                    </div>
+                </div>
+                {% else %}
+                <div class="mb-3 text-start">
+                    <label for="login-username" class="form-label text-secondary small">
+                        <i class="fas fa-user me-1 text-cyan"></i> {{ username_label|default('Username / ID Code') }}
+                    </label>
+                    <input type="text" class="form-control bg-dark text-white border-secondary" id="login-username" name="username"
+                           placeholder="{{ username_placeholder|default('Enter your username or ID') }}" required autocomplete="username" autofocus>
+                </div>
+                {% endif %}
+
+                {% if not (hospitals or 'hospital' in post_url) %}
+                <div class="mb-4 text-start">
+                    <label for="login-password" class="form-label text-secondary small">
+                        <i class="fas fa-lock me-1 text-cyan"></i> Password
+                    </label>
+                    <div class="position-relative">
+                        <input type="password" class="form-control bg-dark text-white border-secondary" id="login-password" name="password"
+                               placeholder="••••••••" required autocomplete="current-password" style="padding-right: 2.8rem;">
+                        <button type="button" onclick="togglePwd()" class="btn btn-link position-absolute end-0 top-50 translate-middle-y pe-3"
+                                style="color: #64748b; background: none; border: none; font-size: 0.9rem;" tabindex="-1">
+                            <i class="fas fa-eye" id="pwdEye"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-cyan w-100 py-2.5 font-weight-bold fs-6" id="loginSubmitBtn">
+                    <i class="fas {% if hospitals or 'hospital' in post_url %}fa-hospital-user{% else %}fa-right-to-bracket{% endif %} me-2"></i> 
+                    {% if hospitals or 'hospital' in post_url %}ENTER HOSPITAL DASHBOARD{% else %}LOGIN{% endif %}
+                </button>
+            </form>
+
+            <!-- Links: Forgot Password & Verify Account -->
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2" style="font-size: 0.82rem;">
+                <a href="{{ url_for('auth.password_reset') }}" class="text-secondary text-decoration-none hover-white">
+                    <i class="fas fa-key me-1"></i> Forgot Password?
+                </a>
+                <a href="{{ url_for('auth.verify_otp') }}" class="text-secondary text-decoration-none hover-white">
+                    <i class="fas fa-mobile-screen me-1"></i> Verify Account
+                </a>
+            </div>
+
+            <!-- Back to Hub Link -->
+            <div class="text-center mt-4 pt-3" style="border-top: 1px solid rgba(255,255,255,0.07); font-size: 0.85rem;">
+                <a href="{{ url_for('auth.login_hub') }}" class="text-cyan text-decoration-none">
+                    <i class="fas fa-arrow-left me-1"></i> &larr; Back to Guardian Portal
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePwd() {
+    const input = document.getElementById('login-password');
+    const eye = document.getElementById('pwdEye');
+    if (input.type === 'password') {
+        input.type = 'text';
+        eye.classList.remove('fa-eye');
+        eye.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        eye.classList.remove('fa-eye-slash');
+        eye.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}

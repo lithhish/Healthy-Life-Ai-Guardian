@@ -1,0 +1,543 @@
+/* Sleek Glassmorphic Dark theme for AI Driver Health Guardian */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+:root {
+    --bg-dark: #070b13;
+    --bg-card: rgba(15, 23, 42, 0.65);
+    --bg-sidebar: rgba(10, 16, 30, 0.85);
+    --border-glass: rgba(255, 255, 255, 0.07);
+    --border-glow: rgba(0, 229, 255, 0.15);
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    
+    --color-cyan: #00e5ff;
+    --color-blue: #0d6efd;
+    --color-green: #10b981;
+    --color-yellow: #f59e0b;
+    --color-red: #ef4444;
+    
+    --shadow-neon: 0 0 20px rgba(0, 229, 255, 0.25);
+    --shadow-red: 0 0 25px rgba(239, 68, 68, 0.4);
+    --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+body {
+    background: radial-gradient(circle at top right, #111e36 0%, var(--bg-dark) 60%);
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
+}
+
+/* Base Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-cyan);
+}
+
+/* Glass Card styling */
+.glass-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+    padding: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -50%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.03) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: skewX(-25deg);
+    transition: 0.75s;
+    pointer-events: none;
+}
+
+.glass-card:hover::before {
+    left: 125%;
+}
+
+.glass-card:hover {
+    border-color: rgba(0, 229, 255, 0.25);
+    box-shadow: 0 10px 40px -10px rgba(0, 229, 255, 0.12), var(--shadow-card);
+    transform: translateY(-2px);
+}
+
+/* Neon Glow Cards */
+.glow-cyan { border-color: rgba(0, 229, 255, 0.3); }
+.glow-green { border-color: rgba(16, 185, 129, 0.3); }
+.glow-yellow { border-color: rgba(245, 158, 11, 0.3); }
+.glow-red { border-color: rgba(239, 68, 68, 0.35); }
+
+/* Layout Grid Setup */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.app-sidebar {
+    width: 260px;
+    background: var(--bg-sidebar);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid var(--border-glass);
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.app-content {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+}
+
+.brand-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-cyan);
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brand-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* Navigation Menu */
+.nav-menu {
+    list-style: none;
+    padding: 0;
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nav-item a {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 16px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.nav-item a:hover, .nav-item.active a {
+    color: var(--text-primary);
+    background: rgba(0, 229, 255, 0.08);
+    border-left: 3px solid var(--color-cyan);
+}
+
+.nav-item a i {
+    font-size: 1.1rem;
+    width: 20px;
+}
+
+/* User Profile Info on Sidebar Footer */
+.sidebar-profile {
+    margin-top: auto;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar-profile i {
+    font-size: 1.8rem;
+    color: var(--color-cyan);
+}
+
+.profile-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+}
+
+.profile-role {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Header Vitals Indicator */
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 35px;
+}
+
+.page-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.system-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border-glass);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px currentColor;
+}
+
+.status-normal { background: var(--color-green); color: var(--color-green); }
+.status-warning { background: var(--color-yellow); color: var(--color-yellow); }
+.status-critical { background: var(--color-red); color: var(--color-red); animation: pulse 1s infinite alternate; }
+
+/* Interactive Input Form (Glass Styled) */
+.form-glass .form-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+}
+
+.form-glass .form-control, .form-glass .form-select {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--border-glass);
+    color: var(--text-primary);
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+
+.form-glass .form-control:focus, .form-glass .form-select:focus {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: var(--color-cyan);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+    color: var(--text-primary);
+}
+
+/* Vital Metric Widget */
+.vital-widget {
+    text-align: center;
+}
+
+.vital-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.vital-value-container {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.vital-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.vital-unit {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.vital-status-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Dynamic emergency layout */
+.critical-pulse-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    border: 12px solid var(--color-red);
+    pointer-events: none;
+    z-index: 9999;
+    animation: criticalBorderPulse 1s infinite alternate;
+    display: none;
+}
+
+/* Table Style overrides */
+.glass-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.glass-table th {
+    text-align: left;
+    padding: 14px 18px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border-glass);
+}
+
+.glass-table td {
+    padding: 14px 18px;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.glass-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Neon buttons */
+.btn-neon {
+    background: linear-gradient(135deg, var(--color-cyan) 0%, var(--color-blue) 100%);
+    border: none;
+    color: #000;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 10px 22px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 229, 255, 0.25);
+}
+
+.btn-neon:hover {
+    box-shadow: 0 6px 20px rgba(0, 229, 255, 0.4);
+    transform: translateY(-1px);
+    color: #000;
+}
+
+.btn-danger-neon {
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 10px 22px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 75, 43, 0.25);
+}
+
+.btn-danger-neon:hover {
+    box-shadow: 0 6px 20px rgba(255, 75, 43, 0.4);
+    transform: translateY(-1px);
+    color: white;
+}
+
+/* Timeline element styles */
+.timeline-flow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    margin: 30px 0;
+    padding: 0 20px;
+}
+
+.timeline-flow::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 1;
+}
+
+.timeline-flow-active {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    width: 0%;
+    height: 3px;
+    background: var(--color-cyan);
+    z-index: 2;
+    transition: width 1s linear;
+}
+
+.timeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 3;
+}
+
+.timeline-node {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #1e293b;
+    border: 2.5px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-secondary);
+    transition: all 0.4s ease;
+}
+
+.timeline-step.active .timeline-node {
+    border-color: var(--color-cyan);
+    background: var(--bg-dark);
+    color: var(--color-cyan);
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.35);
+}
+
+.timeline-step.completed .timeline-node {
+    border-color: var(--color-green);
+    background: var(--color-green);
+    color: white;
+}
+
+.timeline-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-top: 10px;
+    text-align: center;
+    width: 100px;
+}
+
+.timeline-step.active .timeline-label {
+    color: var(--color-cyan);
+}
+
+/* Map Containers */
+#map {
+    height: 400px;
+    border-radius: 12px;
+    border: 1px solid var(--border-glass);
+}
+
+/* Leaflet dark theme styling overrides */
+.leaflet-container {
+    background: #0f172a !important;
+}
+
+.leaflet-tile {
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+.leaflet-popup-content-wrapper {
+    background: #1e293b !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-glass) !important;
+    border-radius: 12px !important;
+    font-family: 'Outfit', sans-serif !important;
+}
+
+.leaflet-popup-tip {
+    background: #1e293b !important;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.75; }
+    100% { transform: scale(1.15); opacity: 1; }
+}
+
+@keyframes criticalBorderPulse {
+    0% { border-color: rgba(239, 68, 68, 0.5); }
+    100% { border-color: rgba(239, 68, 68, 1); box-shadow: inset 0 0 30px rgba(239, 68, 68, 0.4); }
+}
+
+/* Floating Emergency Panel */
+.emergency-banner {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    max-width: 420px;
+    z-index: 10000;
+    border-color: var(--color-red);
+    box-shadow: 0 10px 40px rgba(239, 68, 68, 0.25);
+    background: rgba(17, 24, 39, 0.9);
+    animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: none;
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Login/Registration Styling override */
+.auth-container {
+    max-width: 480px;
+    margin: 80px auto;
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.auth-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.auth-tab.active {
+    color: var(--color-cyan);
+    border-color: var(--color-cyan);
+}

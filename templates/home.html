@@ -1,0 +1,747 @@
+{% extends "base.html" %}
+
+{% block page_title %}AI Driver Health Guardian — Intelligent Health & Emergency System{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Custom CSS Animations & Theme Enhancements for Home Page */
+:root {
+    --color-cyan: #06b6d4;
+    --color-cyan-glow: rgba(6, 182, 212, 0.4);
+    --color-dark-bg: #0b1329;
+    --color-card-bg: rgba(15, 23, 42, 0.75);
+}
+
+.hero-section {
+    position: relative;
+    padding: 3rem 0 5rem 0;
+    overflow: hidden;
+}
+
+.hero-title {
+    font-size: 3.2rem;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, var(--color-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+    font-size: 1.15rem;
+    color: #94a3b8;
+    line-height: 1.6;
+    max-width: 600px;
+}
+
+/* ECG Pulse Waveform Animation */
+.ecg-svg path {
+    stroke: var(--color-cyan);
+    stroke-width: 2.5;
+    fill: none;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: ecgDash 3s linear infinite;
+}
+
+@keyframes ecgDash {
+    0% { stroke-dashoffset: 1000; }
+    100% { stroke-dashoffset: 0; }
+}
+
+.pulse-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 10px #22c55e;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+    70% { transform: scale(1.15); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+/* Feature Cards */
+.feature-card {
+    background: var(--color-card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.75rem;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--color-cyan);
+    box-shadow: 0 10px 30px rgba(6, 182, 212, 0.15);
+}
+
+.feature-icon-wrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    background: rgba(6, 182, 212, 0.12);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--color-cyan);
+    margin-bottom: 1.25rem;
+}
+
+/* Workflow Connected Nodes */
+.workflow-step {
+    position: relative;
+    text-align: center;
+    padding: 1.5rem 1rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+}
+
+.workflow-step:hover {
+    border-color: var(--color-cyan);
+    background: rgba(15, 23, 42, 0.9);
+}
+
+.step-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--color-cyan);
+    margin-bottom: 0.5rem;
+}
+
+/* Trust Bar */
+.trust-bar {
+    background: rgba(15, 23, 42, 0.8);
+    border-y: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1.5rem 0;
+    margin: 3rem 0;
+}
+
+.trust-item {
+    text-align: center;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.trust-item:last-child {
+    border-right: none;
+}
+
+.trust-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.trust-sub {
+    font-size: 0.8rem;
+    color: var(--color-cyan);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Floating Navigation Links Smooth Scroll */
+html {
+    scroll-behavior: smooth;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Section 1: Top Navigation Banner Links -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex flex-wrap justify-content-between align-items-center p-3 rounded-3" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.08);">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-shield-heart text-cyan fs-4"></i>
+                <span class="fw-bold text-white fs-5" style="letter-spacing: 1px;">AI DRIVER HEALTH GUARDIAN</span>
+            </div>
+            <div class="d-flex flex-wrap gap-3 align-items-center" style="font-size: 0.9rem;">
+                <a href="#home" class="text-white text-decoration-none hover-cyan">HOME</a>
+                <a href="#how-it-works" class="text-secondary text-decoration-none hover-cyan">HOW IT WORKS</a>
+                <a href="#features" class="text-secondary text-decoration-none hover-cyan">FEATURES</a>
+                <a href="#emergency" class="text-secondary text-decoration-none hover-cyan">EMERGENCY</a>
+                <a href="{{ url_for('main.erode_hospitals') }}" class="text-secondary text-decoration-none hover-cyan">HOSPITAL NETWORK</a>
+                <a href="#ai-engine" class="text-secondary text-decoration-none hover-cyan">AI ENGINE</a>
+                <a href="#portals" class="btn btn-sm btn-cyan font-weight-bold px-3 ms-2">
+                    <i class="fas fa-right-to-bracket me-1"></i> LOGIN
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 2: HERO SECTION -->
+<div class="hero-section" id="home">
+    <div class="row align-items-center">
+        <!-- Hero Left Column -->
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="badge bg-dark border border-cyan text-cyan px-3 py-2 mb-3 rounded-pill" style="font-size: 0.85rem;">
+                <i class="fas fa-microchip me-1"></i> Intelligent Health &amp; Emergency Guardian
+            </div>
+            <h1 class="hero-title mb-3">
+                AI DRIVER HEALTH GUARDIAN
+            </h1>
+            <h4 class="text-cyan font-weight-bold mb-3" style="letter-spacing: 0.5px;">
+                Your Intelligent Health &amp; Safety Network
+            </h4>
+            <p class="hero-subtitle mb-4">
+                Real-time driver health monitoring, AI-powered risk detection, emergency assistance, hospital coordination and family protection — connected in one intelligent platform.
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+                <a href="{{ url_for('auth.login_hub') }}" class="btn btn-cyan btn-lg px-4 py-3 font-weight-bold">
+                    <i class="fas fa-shield-halved me-2"></i> GET STARTED
+                </a>
+                <a href="#features" class="btn btn-outline-light btn-lg px-4 py-3 font-weight-bold">
+                    <i class="fas fa-compass me-2"></i> EXPLORE PLATFORM
+                </a>
+            </div>
+        </div>
+
+        <!-- Hero Right Column: LIVE DEMO MONITOR -->
+        <div class="col-lg-6">
+            <div class="glass-card glow-cyan position-relative">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="pulse-dot"></span>
+                        <strong class="text-white" style="letter-spacing: 0.5px;">AI HEALTH MONITOR</strong>
+                    </div>
+                    <span class="badge bg-secondary text-white border border-secondary px-2 py-1" style="font-size: 0.75rem;">
+                        DEMO MONITOR
+                    </span>
+                </div>
+
+                <!-- Animated ECG Waveform -->
+                <div class="bg-dark rounded p-2 mb-3 border border-secondary text-center overflow-hidden position-relative">
+                    <svg class="ecg-svg" viewBox="0 0 500 80" style="width: 100%; height: 75px;">
+                        <path d="M0,40 L80,40 L90,15 L100,65 L110,5 L120,75 L130,40 L210,40 L220,15 L230,65 L240,5 L250,75 L260,40 L340,40 L350,15 L360,65 L370,5 L380,75 L390,40 L500,40" />
+                    </svg>
+                </div>
+
+                <!-- Vitals Grid -->
+                <div class="row g-2 mb-3">
+                    <div class="col-4">
+                        <div class="p-2.5 bg-dark rounded border border-secondary text-center">
+                            <span class="text-muted small d-block"><i class="fas fa-heartbeat text-danger me-1"></i> Heart Rate</span>
+                            <strong class="text-white fs-5 font-mono">78 <span class="fs-6 text-muted">BPM</span></strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2.5 bg-dark rounded border border-secondary text-center">
+                            <span class="text-muted small d-block"><i class="fas fa-lungs text-info me-1"></i> SpO₂</span>
+                            <strong class="text-white fs-5 font-mono">98 <span class="fs-6 text-muted">%</span></strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2.5 bg-dark rounded border border-secondary text-center">
+                            <span class="text-muted small d-block"><i class="fas fa-temperature-high text-warning me-1"></i> Temp</span>
+                            <strong class="text-white fs-5 font-mono">36.7 <span class="fs-6 text-muted">°C</span></strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Risk Score & Status -->
+                <div class="d-flex justify-content-between align-items-center p-2.5 bg-dark rounded border border-cyan">
+                    <div>
+                        <span class="text-muted small d-block">AI RISK SCORE</span>
+                        <strong class="text-cyan fs-5 font-mono">12 / 100</strong>
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted small d-block">STATUS</span>
+                        <span class="badge bg-success text-dark font-weight-bold px-2 py-1"><i class="fas fa-circle-check me-1"></i> NORMAL</span>
+                    </div>
+                </div>
+
+                <!-- Emergency Workflow Diagram -->
+                <div class="mt-3 pt-3 border-top border-secondary text-center" style="font-size: 0.78rem;">
+                    <div class="d-flex justify-content-between align-items-center text-muted">
+                        <span><i class="fas fa-steering-wheel text-cyan me-1"></i> DRIVER</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span><i class="fas fa-brain text-info me-1"></i> AI DETECTION</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span><i class="fas fa-truck-medical text-danger me-1"></i> AMBULANCE</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span><i class="fas fa-hospital text-primary me-1"></i> HOSPITAL</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span><i class="fas fa-people-group text-warning me-1"></i> FAMILY</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 3: TRUST & STATUS BAR -->
+<div class="trust-bar rounded-3">
+    <div class="row g-3">
+        <div class="col-6 col-md-3 trust-item">
+            <div class="trust-title">24/7</div>
+            <div class="trust-sub">HEALTH MONITORING</div>
+        </div>
+        <div class="col-6 col-md-3 trust-item">
+            <div class="trust-title">AI ENGINE</div>
+            <div class="trust-sub">RISK ANALYSIS</div>
+        </div>
+        <div class="col-6 col-md-3 trust-item">
+            <div class="trust-title">REAL-TIME</div>
+            <div class="trust-sub">EMERGENCY RESPONSE</div>
+        </div>
+        <div class="col-6 col-md-3 trust-item">
+            <div class="trust-title">INTEGRATED</div>
+            <div class="trust-sub">HOSPITAL NETWORK</div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 4: HOW IT WORKS -->
+<div class="py-5" id="how-it-works">
+    <div class="text-center mb-5">
+        <span class="text-cyan font-mono text-uppercase" style="letter-spacing: 2px;">END-TO-END PROTECTION</span>
+        <h2 class="text-white font-weight-bold mt-1">HOW AI DRIVER HEALTH GUARDIAN WORKS</h2>
+        <p class="text-secondary" style="max-width: 650px; margin: auto;">
+            Continuous multi-sensor monitoring, intelligent signal analysis, automated risk assessment, and emergency escalation.
+        </p>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md">
+            <div class="workflow-step h-100">
+                <div class="step-num">01</div>
+                <h5 class="text-white mb-2">MONITOR</h5>
+                <p class="text-secondary small mb-0">Driver health sensors continuously collect available health and safety telemetry.</p>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="workflow-step h-100">
+                <div class="step-num">02</div>
+                <h5 class="text-white mb-2">ANALYZE</h5>
+                <p class="text-secondary small mb-0">AI and signal-processing engines evaluate vital health trends and physiological anomalies.</p>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="workflow-step h-100">
+                <div class="step-num">03</div>
+                <h5 class="text-white mb-2">DETECT</h5>
+                <p class="text-secondary small mb-0">The system identifies elevated emergency risk patterns and impact events instantly.</p>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="workflow-step h-100">
+                <div class="step-num">04</div>
+                <h5 class="text-white mb-2">RESPOND</h5>
+                <p class="text-secondary small mb-0">Automated workflow coordinates driver alerts, nearby ambulance dispatch, and hospital matching.</p>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="workflow-step h-100">
+                <div class="step-num">05</div>
+                <h5 class="text-white mb-2">PROTECT</h5>
+                <p class="text-secondary small mb-0">Family contacts and authorized emergency personnel receive status and location notifications.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 5: HEALTH MONITORING FEATURES -->
+<div class="py-5" id="features">
+    <div class="text-center mb-5">
+        <span class="text-cyan font-mono text-uppercase" style="letter-spacing: 2px;">ADVANCED SENSOR SUITE</span>
+        <h2 class="text-white font-weight-bold mt-1">INTELLIGENT HEALTH MONITORING</h2>
+        <p class="text-secondary" style="max-width: 650px; margin: auto;">
+            Comprehensive driver vitals tracking powered by continuous sensor signal processing.
+        </p>
+    </div>
+
+    <div class="row g-4">
+        <!-- 1. Heart Rate -->
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card">
+                <div class="feature-icon-wrapper"><i class="fas fa-heartbeat"></i></div>
+                <h5 class="text-white font-weight-bold mb-2">HEART RATE</h5>
+                <p class="text-secondary small mb-0">Continuous cardiac pulse monitoring with real-time tachycardia and bradycardia alert triggers.</p>
+            </div>
+        </div>
+        <!-- 2. SpO2 -->
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card">
+                <div class="feature-icon-wrapper" style="color: #06b6d4; border-color: rgba(6,182,212,0.3);"><i class="fas fa-lungs"></i></div>
+                <h5 class="text-white font-weight-bold mb-2">SpO₂ MONITORING</h5>
+                <p class="text-secondary small mb-0">Blood oxygen saturation tracking to identify sudden hypoxia drops and respiratory distress.</p>
+            </div>
+        </div>
+        <!-- 3. ECG -->
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card">
+                <div class="feature-icon-wrapper" style="color: #ef4444; border-color: rgba(239,68,68,0.3);"><i class="fas fa-wave-square"></i></div>
+                <h5 class="text-white font-weight-bold mb-2">ECG SIGNALS</h5>
+                <p class="text-secondary small mb-0">Single-lead AD8232 ECG waveform signal processing with automated R-peak rhythm analysis.</p>
+            </div>
+        </div>
+        <!-- 4. Body Temperature -->
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card">
+                <div class="feature-icon-wrapper" style="color: #f59e0b; border-color: rgba(245,158,11,0.3);"><i class="fas fa-temperature-high"></i></div>
+                <h5 class="text-white font-weight-bold mb-2">BODY TEMPERATURE</h5>
+                <p class="text-secondary small mb-0">Skin and ambient temperature trend tracking for fever detection and heatstroke prevention.</p>
+            </div>
+        </div>
+
+        <!-- 5. Accident Detection -->
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card">
+                <div class="feature-icon-wrapper" style="color: #ef4444; border-color: rgba(239,68,68,0.3);"><i class="fas fa-car-burst"></i></div>
+                <h5 class="text-white font-weight-bold mb-2">ACCIDENT DETECTION</h5>
+                <p class="text-secondary small mb-0">MPU6050 6-axis accelerometer &amp; gyroscope motion impact detection for crash emergencies.</p>
+            </div>
+        </div>
+        <!-- 6. GPS Tracking -->
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card">
+                <div class="feature-icon-wrapper" style="color: #3b82f6; border-color: rgba(59,130,246,0.3);"><i class="fas fa-location-dot"></i></div>
+                <h5 class="text-white font-weight-bold mb-2">GPS LOCATION</h5>
+                <p class="text-secondary small mb-0">Precise location telemetry for fast ambulance dispatch and regional hospital spatial matching.</p>
+            </div>
+        </div>
+        <!-- 7. Fatigue Monitoring -->
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card">
+                <div class="feature-icon-wrapper" style="color: #8b5cf6; border-color: rgba(139,92,246,0.3);"><i class="fas fa-user-clock"></i></div>
+                <h5 class="text-white font-weight-bold mb-2">FATIGUE MONITORING</h5>
+                <p class="text-secondary small mb-0">Driver fatigue, drowsiness, and prolonged driving duration indicators to prevent accidents.</p>
+            </div>
+        </div>
+        <!-- 8. AI Risk Analysis -->
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card">
+                <div class="feature-icon-wrapper" style="color: #22c55e; border-color: rgba(34,197,94,0.3);"><i class="fas fa-brain"></i></div>
+                <h5 class="text-white font-weight-bold mb-2">AI RISK ANALYSIS</h5>
+                <p class="text-secondary small mb-0">Multi-signal combined emergency risk engine computing cardiac anomaly indices instantly.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 6: EMERGENCY RESPONSE WORKFLOW -->
+<div class="py-5" id="emergency">
+    <div class="glass-card p-4 p-md-5" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(239, 68, 68, 0.3);">
+        <div class="row align-items-center">
+            <div class="col-lg-5 mb-4 mb-lg-0">
+                <span class="badge bg-danger text-white px-3 py-1.5 mb-2"><i class="fas fa-triangle-exclamation me-1"></i> CRITICAL RESPONSE</span>
+                <h2 class="text-white font-weight-bold mb-3">WHEN EVERY SECOND MATTERS</h2>
+                <p class="text-secondary mb-4" style="line-height: 1.6;">
+                    When a critical emergency risk is detected, the platform coordinates configured emergency notifications, registered ambulance services, suitable hospitals, and linked family contacts in real time.
+                </p>
+                <div class="d-flex align-items-center gap-2 text-cyan font-mono small">
+                    <i class="fas fa-shield-heart fs-5"></i> Rapid Emergency Orchestration Workflow
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="row g-2 text-center" style="font-size: 0.85rem;">
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-dark rounded border border-danger">
+                            <i class="fas fa-heart-crack fs-3 text-danger mb-2 d-block"></i>
+                            <strong class="text-white">ABNORMAL VITAL PATTERN</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-dark rounded border border-warning">
+                            <i class="fas fa-brain fs-3 text-warning mb-2 d-block"></i>
+                            <strong class="text-white">AI RISK ASSESSMENT</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-dark rounded border border-danger">
+                            <i class="fas fa-bell fs-3 text-danger mb-2 d-block"></i>
+                            <strong class="text-white">EMERGENCY ACTIVATED</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-dark rounded border border-cyan">
+                            <i class="fas fa-truck-medical fs-3 text-cyan mb-2 d-block"></i>
+                            <strong class="text-white">AMBULANCE DISPATCHED</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-dark rounded border border-primary">
+                            <i class="fas fa-hospital fs-3 text-primary mb-2 d-block"></i>
+                            <strong class="text-white">HOSPITAL MATCHED</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-dark rounded border border-info">
+                            <i class="fas fa-people-group fs-3 text-info mb-2 d-block"></i>
+                            <strong class="text-white">FAMILY NOTIFIED</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 7: CONNECTED HOSPITAL NETWORK -->
+<div class="py-5">
+    <div class="row align-items-center">
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="glass-card glow-cyan">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-white font-weight-bold mb-0"><i class="fas fa-map-location-dot me-2 text-cyan"></i> ERODE DISTRICT REGIONAL MAP</h5>
+                    <span class="badge bg-cyan text-dark">Live Map Integration</span>
+                </div>
+                <p class="text-secondary small mb-3">
+                    Connect emergency events with registered hospitals, specialization capabilities, and nearby emergency services in Erode District, Tamil Nadu.
+                </p>
+                <div class="bg-dark rounded p-4 text-center border border-secondary mb-3" style="min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <i class="fas fa-hospital-user text-cyan mb-2" style="font-size: 3rem;"></i>
+                    <h6 class="text-white font-weight-bold mb-1">Erode District Hospital Finder</h6>
+                    <p class="text-muted small mb-0">Lotus Hospital, GH Erode, KMCH Erode, Sudha Hospital, Emergency Cardiac Centers</p>
+                </div>
+                <a href="{{ url_for('main.erode_hospitals') }}" class="btn btn-outline-cyan w-100 font-weight-bold">
+                    <i class="fas fa-magnifying-glass-location me-2"></i> OPEN ERODE HOSPITAL DISCOVERY MODULE
+                </a>
+            </div>
+        </div>
+
+        <!-- Section 8: FAMILY PROTECTION -->
+        <div class="col-lg-6">
+            <div class="glass-card border-top border-4 border-warning">
+                <span class="badge bg-warning text-dark px-3 py-1 mb-2 font-weight-bold">FAMILY SAFETY</span>
+                <h3 class="text-white font-weight-bold mb-3">KEEP FAMILIES CONNECTED</h3>
+                <p class="text-secondary mb-4" style="line-height: 1.6;">
+                    During an emergency event, configured family contacts receive status, GPS location, and assigned hospital notifications through the connected emergency workflow.
+                </p>
+
+                <div class="p-3 bg-dark rounded border border-secondary mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-warning font-weight-bold"><i class="fas fa-shield-heart me-1"></i> EMERGENCY FAMILY ALERT</span>
+                        <span class="badge bg-secondary">SIMULATED PREVIEW</span>
+                    </div>
+                    <p class="text-muted small mb-1"><strong>Driver:</strong> Lithhish (TN-33-AX-1234)</p>
+                    <p class="text-muted small mb-1"><strong>Location:</strong> Perundurai Road, Erode (11.3410, 77.7170)</p>
+                    <p class="text-muted small mb-0"><strong>Status:</strong> Dispatched to Lotus Hospital ER</p>
+                </div>
+
+                <a href="{{ url_for('auth.family_login') }}" class="btn btn-warning text-dark w-100 font-weight-bold">
+                    <i class="fas fa-people-group me-2"></i> ACCESS FAMILY GUARDIAN PORTAL
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 9: INTELLIGENT AI ENGINE -->
+<div class="py-5" id="ai-engine">
+    <div class="text-center mb-5">
+        <span class="text-cyan font-mono text-uppercase" style="letter-spacing: 2px;">NEURAL SIGNAL ANALYSIS</span>
+        <h2 class="text-white font-weight-bold mt-1">INTELLIGENT AI RISK ENGINE</h2>
+        <p class="text-secondary" style="max-width: 650px; margin: auto;">
+            Multi-layered physiological signal processing and AI-assisted emergency risk assessment.
+        </p>
+    </div>
+
+    <div class="row g-3 text-center">
+        <div class="col-md">
+            <div class="p-3 bg-dark rounded border border-secondary h-100">
+                <span class="text-cyan font-mono d-block mb-1">LAYER 1</span>
+                <strong class="text-white d-block mb-1">SENSOR TELEMETRY</strong>
+                <small class="text-muted">HR, SpO2, Temp, Motion, GPS</small>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="p-3 bg-dark rounded border border-secondary h-100">
+                <span class="text-cyan font-mono d-block mb-1">LAYER 2</span>
+                <strong class="text-white d-block mb-1">SIGNAL PROCESSING</strong>
+                <small class="text-muted">AD8232 ECG &amp; R-Peak Filtering</small>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="p-3 bg-dark rounded border border-cyan h-100 glow-cyan">
+                <span class="text-cyan font-mono d-block mb-1">LAYER 3</span>
+                <strong class="text-white d-block mb-1">AI / ML RISK ASSESSMENT</strong>
+                <small class="text-cyan">Multi-vital Anomaly Model</small>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="p-3 bg-dark rounded border border-secondary h-100">
+                <span class="text-cyan font-mono d-block mb-1">LAYER 4</span>
+                <strong class="text-white d-block mb-1">RISK ENGINE &amp; RULES</strong>
+                <small class="text-muted">Cardiac &amp; Impact Override</small>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="p-3 bg-dark rounded border border-secondary h-100">
+                <span class="text-cyan font-mono d-block mb-1">LAYER 5</span>
+                <strong class="text-white d-block mb-1">EMERGENCY RESPONSE</strong>
+                <small class="text-muted">Ambulance &amp; Hospital Routing</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 10: ROLE PORTALS ACCESS SECTION -->
+<div class="py-5" id="portals">
+    <div class="text-center mb-5">
+        <span class="text-cyan font-mono text-uppercase" style="letter-spacing: 2px;">SECURE ACCESS CONTROL</span>
+        <h2 class="text-white font-weight-bold mt-1">ONE PLATFORM. MULTIPLE SECURE PORTALS.</h2>
+        <p class="text-secondary" style="max-width: 650px; margin: auto;">
+            Role-specific portals designed for drivers, families, hospital staff, ambulance personnel, and system admins.
+        </p>
+    </div>
+
+    <div class="row g-4">
+        <!-- 1. Driver Portal -->
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-card h-100 p-4 border-top border-4 border-cyan text-center">
+                <div class="fs-1 text-cyan mb-2"><i class="fas fa-steering-wheel"></i></div>
+                <h5 class="text-white font-weight-bold mb-1">DRIVER PORTAL</h5>
+                <p class="text-secondary small mb-3">Monitor continuous health vitals, risk scores, and emergency SOS alerts.</p>
+                <a href="{{ url_for('auth.driver_login') }}" class="btn btn-outline-cyan w-100 font-weight-bold">
+                    LOGIN TO DRIVER PORTAL &rarr;
+                </a>
+            </div>
+        </div>
+
+        <!-- 2. Family Portal -->
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-card h-100 p-4 border-top border-4 border-warning text-center">
+                <div class="fs-1 text-warning mb-2"><i class="fas fa-people-group"></i></div>
+                <h5 class="text-white font-weight-bold mb-1">FAMILY PORTAL</h5>
+                <p class="text-secondary small mb-3">Stay connected with registered driver emergencies and location tracking.</p>
+                <a href="{{ url_for('auth.family_login') }}" class="btn btn-outline-warning w-100 font-weight-bold">
+                    LOGIN TO FAMILY PORTAL &rarr;
+                </a>
+            </div>
+        </div>
+
+        <!-- 3. Hospital Staff Portal -->
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-card h-100 p-4 border-top border-4 border-info text-center">
+                <div class="fs-1 text-info mb-2"><i class="fas fa-hospital-user"></i></div>
+                <h5 class="text-white font-weight-bold mb-1">HOSPITAL STAFF PORTAL</h5>
+                <p class="text-secondary small mb-3">Multi-step login for Doctors, Nurses, Receptionists &amp; Pharmacists.</p>
+                <a href="{{ url_for('auth.staff_login') }}" class="btn btn-outline-info w-100 font-weight-bold">
+                    ACCESS STAFF PORTAL &rarr;
+                </a>
+            </div>
+        </div>
+
+        <!-- 4. Ambulance Portal -->
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-card h-100 p-4 border-top border-4 border-danger text-center">
+                <div class="fs-1 text-danger mb-2"><i class="fas fa-truck-medical"></i></div>
+                <h5 class="text-white font-weight-bold mb-1">AMBULANCE PORTAL</h5>
+                <p class="text-secondary small mb-3">Receive emergency dispatch alerts and navigate to driver locations.</p>
+                <a href="{{ url_for('auth.ambulance_login') }}" class="btn btn-outline-danger w-100 font-weight-bold">
+                    LOGIN TO AMBULANCE PORTAL &rarr;
+                </a>
+            </div>
+        </div>
+
+        <!-- 5. Admin Portal -->
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-card h-100 p-4 border-top border-4 border-success text-center">
+                <div class="fs-1 text-success mb-2"><i class="fas fa-user-shield"></i></div>
+                <h5 class="text-white font-weight-bold mb-1">ADMIN PORTAL</h5>
+                <p class="text-secondary small mb-3">System administration, hospital registration, and platform management.</p>
+                <a href="{{ url_for('auth.admin_login') }}" class="btn btn-outline-success w-100 font-weight-bold">
+                    LOGIN TO ADMIN PORTAL &rarr;
+                </a>
+            </div>
+        </div>
+
+        <!-- 6. Hospital Admin Management -->
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-card h-100 p-4 border-top border-4 border-primary text-center">
+                <div class="fs-1 text-primary mb-2"><i class="fas fa-hospital"></i></div>
+                <h5 class="text-white font-weight-bold mb-1">HOSPITAL MANAGEMENT</h5>
+                <p class="text-secondary small mb-3">Hospital Admin dashboard for staff registration &amp; ER capacity.</p>
+                <a href="{{ url_for('auth.hospital_login') }}" class="btn btn-outline-primary w-100 font-weight-bold">
+                    LOGIN TO HOSPITAL ADMIN &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 11: SAFETY DISCLAIMER -->
+<div class="py-3">
+    <div class="alert alert-dark border border-secondary text-secondary text-center small mb-0" style="border-radius: 12px; background: rgba(15,23,42,0.9);">
+        <i class="fas fa-triangle-exclamation me-1 text-warning"></i>
+        <strong>Medical Disclaimer:</strong> AI-generated risk assessments are intended to support emergency awareness and response. They are not a substitute for professional medical diagnosis or emergency medical services.
+    </div>
+</div>
+
+<!-- Section 12: CALL TO ACTION -->
+<div class="py-5">
+    <div class="glass-card glow-cyan text-center p-5 position-relative overflow-hidden">
+        <h2 class="text-white font-weight-bold mb-3">READY TO PROTECT EVERY JOURNEY?</h2>
+        <p class="text-secondary mb-4" style="max-width: 600px; margin: auto;">
+            Connect your driver health, emergency response, and healthcare network through one intelligent platform.
+        </p>
+        <div class="d-flex flex-wrap justify-content-center gap-3">
+            <a href="{{ url_for('auth.login_hub') }}" class="btn btn-cyan btn-lg px-4 font-weight-bold">
+                <i class="fas fa-shield-heart me-2"></i> ACCESS GUARDIAN PORTAL
+            </a>
+            <a href="#features" class="btn btn-outline-light btn-lg px-4 font-weight-bold">
+                <i class="fas fa-list-check me-2"></i> EXPLORE FEATURES
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Section 13: FOOTER -->
+<footer class="mt-5 pt-5 pb-4 border-top border-secondary text-secondary" style="font-size: 0.88rem;">
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <h5 class="text-white font-weight-bold mb-2"><i class="fas fa-shield-heart text-cyan me-2"></i>AI DRIVER HEALTH GUARDIAN</h5>
+            <p class="text-muted small">
+                Intelligent health monitoring, AI anomaly detection, and real-time emergency response platform for safer driver journeys.
+            </p>
+        </div>
+        <div class="col-6 col-lg-2">
+            <h6 class="text-white font-weight-bold mb-3">Navigation</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-1.5"><a href="#home" class="text-secondary text-decoration-none hover-cyan">Home</a></li>
+                <li class="mb-1.5"><a href="#how-it-works" class="text-secondary text-decoration-none hover-cyan">How It Works</a></li>
+                <li class="mb-1.5"><a href="#features" class="text-secondary text-decoration-none hover-cyan">Features</a></li>
+                <li class="mb-1.5"><a href="#emergency" class="text-secondary text-decoration-none hover-cyan">Emergency Workflow</a></li>
+                <li class="mb-1.5"><a href="{{ url_for('main.erode_hospitals') }}" class="text-secondary text-decoration-none hover-cyan">Erode Hospitals</a></li>
+            </ul>
+        </div>
+        <div class="col-6 col-lg-3">
+            <h6 class="text-white font-weight-bold mb-3">Guardian Portals</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-1.5"><a href="{{ url_for('auth.driver_login') }}" class="text-secondary text-decoration-none hover-cyan">Driver Portal</a></li>
+                <li class="mb-1.5"><a href="{{ url_for('auth.family_login') }}" class="text-secondary text-decoration-none hover-cyan">Family Portal</a></li>
+                <li class="mb-1.5"><a href="{{ url_for('auth.staff_login') }}" class="text-secondary text-decoration-none hover-cyan">Hospital Staff Portal</a></li>
+                <li class="mb-1.5"><a href="{{ url_for('auth.ambulance_login') }}" class="text-secondary text-decoration-none hover-cyan">Ambulance Portal</a></li>
+                <li class="mb-1.5"><a href="{{ url_for('auth.admin_login') }}" class="text-secondary text-decoration-none hover-cyan">Admin Portal</a></li>
+            </ul>
+        </div>
+        <div class="col-lg-3">
+            <h6 class="text-white font-weight-bold mb-3">Erode District Coverage</h6>
+            <p class="text-muted small mb-2"><i class="fas fa-location-dot text-cyan me-1"></i> Erode District, Tamil Nadu, India</p>
+            <p class="text-muted small mb-0"><i class="fas fa-hospital me-1 text-primary"></i> Integrated Regional Hospital Discovery &amp; Ambulance Network</p>
+        </div>
+    </div>
+
+    <div class="pt-3 border-top border-secondary text-center text-muted small">
+        <p class="mb-0">&copy; AI Driver Health Guardian — Intelligent AI-Assisted Emergency Monitoring Platform.</p>
+    </div>
+</footer>
+
+<style>
+.hover-cyan:hover { color: var(--color-cyan) !important; }
+</style>
+{% endblock %}

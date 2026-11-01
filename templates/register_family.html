@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block page_title %}Family Member Registration{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width: 650px;">
+  <div class="glass-card glow-cyan">
+    <div class="text-center mb-4">
+      <i class="fa fa-people-group mb-2" style="font-size:2.5rem;color:var(--color-cyan);"></i>
+      <h4 style="font-weight:700;color:var(--color-cyan);">FAMILY MEMBER REGISTRATION</h4>
+      <p class="text-secondary small">Register to receive instant emergency alerts when your family member needs help.</p>
+    </div>
+
+      <div class="alert alert-info border-info text-white bg-transparent mb-4" role="alert" style="font-size:0.85rem;">
+        <i class="fa fa-circle-info me-2 text-cyan"></i>
+        <strong>Driver ID Verification Required:</strong> Family members cannot register independently. You must enter the unique Driver ID (e.g. <code>DRV000001</code>) provided by your driver.
+      </div>
+
+      {% if error %}
+      <div class="alert alert-danger border-danger text-white bg-transparent mb-4" role="alert">
+        <i class="fas fa-circle-exclamation me-2"></i>{{ error }}
+      </div>
+      {% endif %}
+
+      <form action="{{ url_for('main.register_family_page') }}" method="POST" class="form-glass" id="family-reg-form">
+        
+        <h5 class="mb-3 text-cyan border-bottom pb-2" style="font-size:1rem;"><i class="fa fa-id-card me-2"></i>Step 1: Driver ID Verification</h5>
+        <div class="row mb-4 align-items-end">
+          <div class="col-md-8 mb-2">
+            <label for="driver_id" class="form-label">Driver ID Code <span class="text-danger">*</span></label>
+            <input type="text" class="form-control text-uppercase" id="driver_id" name="driver_id" placeholder="e.g. DRV000001" required>
+          </div>
+          <div class="col-md-4 mb-2">
+            <button type="button" class="btn btn-outline-info w-100" onclick="verifyDriverIdCode()">
+              <i class="fa fa-magnifying-glass me-1"></i> Verify ID
+            </button>
+          </div>
+          <div class="col-12" id="driver-verify-msg"></div>
+        </div>
+
+        <h5 class="mb-3 text-cyan border-bottom pb-2" style="font-size:1rem;"><i class="fa fa-mobile-screen me-2"></i>Step 2: Mobile Number &amp; OTP Verification</h5>
+        <div class="row mb-4 align-items-end">
+          <div class="col-md-5 mb-2">
+            <label for="phone" class="form-label">Family Mobile Number <span class="text-danger">*</span></label>
+            <input type="tel" class="form-control" id="phone" name="phone" placeholder="+91 9876543210" required>
+          </div>
+          <div class="col-md-3 mb-2">
+            <button type="button" class="btn btn-outline-warning w-100" onclick="requestOTP('family_reg')">
+              <i class="fa fa-paper-plane me-1"></i> Send OTP
+            </button>
+          </div>
+          <div class="col-md-4 mb-2">
+            <label for="otp_code" class="form-label">Enter 6-Digit OTP</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="otp_code" name="otp_code" placeholder="123456" maxlength="6" required>
+              <button type="button" class="btn btn-success" onclick="confirmOTP('family_reg')">Verify</button>
+            </div>
+          </div>
+          <div class="col-12" id="otp-status-msg"></div>
+        </div>
+
+        <h5 class="mb-3 text-cyan border-bottom pb-2" style="font-size:1rem;"><i class="fa fa-key me-2"></i>Step 3: Account Credentials</h5>
+        <div class="row mb-4">
+          <div class="col-md-6 mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="username" name="username" placeholder="e.g. parent_account" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+        </div>
+
+        <h5 class="mb-3 text-cyan border-bottom pb-2" style="font-size:1rem;"><i class="fa fa-user me-2"></i>Personal Details &amp; Relationship</h5>
+        <div class="row mb-4">
+          <div class="col-md-6 mb-3">
+            <label for="name" class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="name" name="name" placeholder="Your full name" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="relation" class="form-label">Relationship to Driver</label>
+            <select class="form-select" id="relation" name="relation" required>
+              <option value="Father">Father</option>
+              <option value="Mother">Mother</option>
+              <option value="Spouse">Spouse</option>
+              <option value="Sibling">Sibling</option>
+              <option value="Child">Child</option>
+              <option value="Guardian">Guardian</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="preferred_language" class="form-label">Preferred Voice Alert Language</label>
+            <select class="form-select" id="preferred_language" name="preferred_language">
+              {% for code, name in lang_names.items() %}
+              <option value="{{ code }}" {% if code == 'en' %}selected{% endif %}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <h5 class="mb-3 text-cyan border-bottom pb-2" style="font-size:1rem;"><i class="fa fa-clipboard-check me-2"></i>Communication Consent</h5>
+        <div class="alert alert-dark border-secondary text-light mb-4" style="font-size:0.9rem;">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="emergency_sms_consent" name="emergency_sms_consent" checked>
+            <label class="form-check-label" for="emergency_sms_consent">
+              <strong>Emergency SMS Consent:</strong> I agree to receive real-time SMS notifications via Twilio when the driver experiences a critical emergency.
+            </label>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="emergency_status_consent" name="emergency_status_consent" checked>
+            <label class="form-check-label" for="emergency_status_consent">
+              <strong>Status Updates Consent:</strong> I agree to receive SMS updates about hospital admission and ambulance dispatch.
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-neon w-100 py-2.5 mt-2">
+          <i class="fas fa-user-plus me-2"></i> Verify OTP &amp; Link Family Account
+        </button>
+      </form>
+
+      <div class="text-center mt-4">
+        <p class="mb-0 text-secondary" style="font-size:0.85rem;">
+          Already registered? <a href="{{ url_for('auth.login', role='family') }}" style="color:var(--color-cyan);text-decoration:none;">Login Here</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+{% block extra_js %}
+<script>
+function verifyDriverIdCode() {
+  const driverIdInput = document.getElementById('driver_id');
+  const driverId = driverIdInput.value.trim();
+  const msgDiv = document.getElementById('driver-verify-msg');
+
+  if (!driverId) {
+    msgDiv.innerHTML = `<div class="alert alert-warning py-1 mt-2 small"><i class="fa fa-triangle-exclamation me-1"></i> Please enter a Driver ID (e.g. DRV-000001).</div>`;
+    return;
+  }
+
+  fetch(`/api/driver/verify-id/${encodeURIComponent(driverId)}`)
+  .then(r => r.json())
+  .then(data => {
+    if (data.valid || data.success) {
+      if (data.driver_id_code) {
+        driverIdInput.value = data.driver_id_code;
+      }
+      msgDiv.innerHTML = `<div class="alert alert-success py-2 mt-2 small"><i class="fa fa-circle-check me-1"></i> <strong>✓ Driver Found</strong><br>Driver Name: <strong>${data.driver_name}</strong><br>Driver ID: <code>${data.driver_id_code || data.driver_id}</code></div>`;
+    } else {
+      msgDiv.innerHTML = `<div class="alert alert-danger py-2 mt-2 small"><i class="fa fa-triangle-exclamation me-1"></i> <strong>✗ Invalid Driver ID</strong><br>${data.message || 'Please enter a valid registered Driver ID.'}</div>`;
+    }
+  })
+  .catch(e => {
+    msgDiv.innerHTML = `<div class="alert alert-danger py-2 mt-2 small">Unable to verify Driver ID. Please try again.</div>`;
+  });
+}
+
+function requestOTP(purpose) {
+  const phone = document.getElementById('phone').value.trim();
+  const driverId = document.getElementById('driver_id').value.trim();
+  const msgDiv = document.getElementById('otp-status-msg');
+
+  if (!driverId) {
+    alert('Please enter and verify the Driver ID first.');
+    return;
+  }
+  if (!phone) {
+    alert('Please enter your mobile phone number.');
+    return;
+  }
+
+  fetch('/api/otp/send', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ phone, purpose, driver_id: driverId })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      msgDiv.innerHTML = `<div class="alert alert-success mt-2 py-2 small"><i class="fa fa-circle-check me-1"></i> ${data.message} <strong>(OTP Simulation Code: ${data.otp_code})</strong></div>`;
+      document.getElementById('otp_code').value = data.otp_code;
+    } else {
+      msgDiv.innerHTML = `<div class="alert alert-danger mt-2 py-2 small"><i class="fa fa-triangle-exclamation me-1"></i> ${data.message}</div>`;
+    }
+  });
+}
+
+function confirmOTP(purpose) {
+  const phone = document.getElementById('phone').value.trim();
+  const otp_code = document.getElementById('otp_code').value.trim();
+  const msgDiv = document.getElementById('otp-status-msg');
+
+  if (!phone || !otp_code) {
+    alert('Please enter phone number and OTP code.');
+    return;
+  }
+
+  fetch('/api/otp/verify', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ phone, otp_code, purpose })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      msgDiv.innerHTML = `<div class="alert alert-success mt-2 py-2 small"><i class="fa fa-shield-check me-1"></i> ✅ OTP Verified Successfully!</div>`;
+    } else {
+      msgDiv.innerHTML = `<div class="alert alert-danger mt-2 py-2 small"><i class="fa fa-circle-xmark me-1"></i> ${data.message}</div>`;
+    }
+  });
+}
+</script>
+{% endblock %}
+{% endblock %}

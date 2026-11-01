@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block page_title %}Driver Registration{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width: 800px;">
+    <div class="glass-card glow-cyan">
+        <h4 class="mb-2 text-center" style="font-weight: 700; color: var(--color-cyan);">CREATE DRIVER GUARDIAN ACCOUNT</h4>
+        <div class="text-center mb-4">
+            <span class="badge bg-primary px-3 py-2" style="font-size:0.85rem;"><i class="fa fa-id-card me-1"></i> Unique Driver ID (e.g. DRV000001) will be auto-generated</span>
+        </div>
+
+        {% if error %}
+            <div class="alert alert-danger border-danger text-white bg-transparent mb-4" role="alert">
+                <i class="fas fa-circle-exclamation me-2"></i> {{ error }}
+            </div>
+        {% endif %}
+
+        <form action="{{ url_for('main.register_page') }}" method="POST" class="form-glass" id="driver-reg-form">
+            <h5 class="mb-3 text-cyan border-bottom pb-2" style="color: var(--color-cyan); font-size: 1rem;"><i class="fa fa-mobile-screen me-2"></i>Mobile Number &amp; OTP Verification</h5>
+            <div class="row mb-4 align-items-end">
+                <div class="col-md-5 mb-3">
+                    <label for="phone" class="form-label">Driver Mobile Number</label>
+                    <input type="tel" class="form-control" id="phone" name="phone" placeholder="+91 9876543200" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <button type="button" class="btn btn-outline-warning w-100" id="send-otp-btn" onclick="requestOTP('driver_reg')">
+                        <i class="fa fa-paper-plane me-1"></i> Send OTP
+                    </button>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="otp_code" class="form-label">Enter 6-Digit OTP</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="otp_code" name="otp_code" placeholder="123456" maxlength="6" required>
+                        <button type="button" class="btn btn-success" id="verify-otp-btn" onclick="confirmOTP('driver_reg')">Verify</button>
+                    </div>
+                </div>
+                <div class="col-12" id="otp-status-msg"></div>
+            </div>
+
+            <h5 class="mb-3 text-cyan border-bottom pb-2" style="color: var(--color-cyan); font-size: 1rem;"><i class="fa fa-key me-2"></i>Account Security</h5>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Desired Username</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="e.g. driver2" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Enter password" required>
+                </div>
+            </div>
+
+            <h5 class="mb-3 text-cyan border-bottom pb-2" style="color: var(--color-cyan); font-size: 1rem;"><i class="fa fa-user me-2"></i>Personal Profile Details</h5>
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3">
+                    <label for="name" class="form-label">Driver Full Name</label>
+                    <input type="text" class="form-control" id="name" name="name" placeholder="Full name" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="age" class="form-label">Age</label>
+                    <input type="number" class="form-control" id="age" name="age" placeholder="Age" required>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="gender" class="form-label">Gender</label>
+                    <select class="form-select" id="gender" name="gender" required>
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <label for="blood_group" class="form-label">Blood Group</label>
+                    <input type="text" class="form-control" id="blood_group" name="blood_group" placeholder="e.g. O+, A-" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="height" class="form-label">Height (cm)</label>
+                    <input type="number" step="0.1" class="form-control" id="height" name="height" placeholder="Height in cm" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="weight" class="form-label">Weight (kg)</label>
+                    <input type="number" step="0.1" class="form-control" id="weight" name="weight" placeholder="Weight in kg" required>
+                </div>
+            </div>
+
+            <h5 class="mb-3 text-cyan border-bottom pb-2" style="color: var(--color-cyan); font-size: 1rem;"><i class="fa fa-car me-2"></i>Vehicle & Legal Details</h5>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label for="vehicle_number" class="form-label">Vehicle Number</label>
+                    <input type="text" class="form-control" id="vehicle_number" name="vehicle_number" placeholder="e.g. TN-33-AX-1234" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="driving_license" class="form-label">Driving License No</label>
+                    <input type="text" class="form-control" id="driving_license" name="driving_license" placeholder="License Number" required>
+                </div>
+            </div>
+
+            <h5 class="mb-3 text-cyan border-bottom pb-2" style="color: var(--color-cyan); font-size: 1rem;"><i class="fa fa-heart-pulse me-2"></i>Medical Background & Contacts</h5>
+            <div class="mb-3">
+                <label for="medical_history" class="form-label">Medical History / Past Conditions</label>
+                <textarea class="form-control" id="medical_history" name="medical_history" rows="2" placeholder="e.g. Hypertension, Asthma, Diabetes, or None"></textarea>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3">
+                    <label for="emergency_contacts" class="form-label">Emergency Contacts (Name: Phone)</label>
+                    <input type="text" class="form-control" id="emergency_contacts" name="emergency_contacts" placeholder="e.g. Dad: 9876543210, Mom: 9876543211" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="insurance" class="form-label">Insurance Provider & Policy Number</label>
+                    <input type="text" class="form-control" id="insurance" name="insurance" placeholder="e.g. HDFC ERGO #9827412" required>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label for="family_details" class="form-label">Family Details (Spouse/Parents)</label>
+                    <input type="text" class="form-control" id="family_details" name="family_details" placeholder="e.g. Father: Ravindran, Mother: Shanthi" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="address" class="form-label">Residential Address</label>
+                    <input type="text" class="form-control" id="address" name="address" placeholder="Residential Address" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-neon w-100 py-2.5 mt-3">
+                <i class="fas fa-user-plus me-2"></i> Register Driver Profile
+            </button>
+        </form>
+
+        <div class="text-center mt-4">
+            <p class="mb-0 text-secondary" style="font-size: 0.85rem;">
+                Already registered? 
+                <a href="{{ url_for('auth.login', role='driver') }}" style="color: var(--color-cyan); text-decoration: none;">Login Here</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function requestOTP(purpose) {
+  const phone = document.getElementById('phone').value.trim();
+  const driverId = document.getElementById('driver_id') ? document.getElementById('driver_id').value.trim() : null;
+
+  if (!phone) {
+    alert('Please enter your mobile phone number.');
+    return;
+  }
+
+  fetch('/api/otp/send', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ phone, purpose, driver_id: driverId })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const msgDiv = document.getElementById('otp-status-msg');
+    if (data.success) {
+      msgDiv.innerHTML = `<div class="alert alert-success mt-2 py-2 small"><i class="fa fa-circle-check me-1"></i> ${data.message} <strong>(OTP Simulation Code: ${data.otp_code})</strong></div>`;
+      if (document.getElementById('otp_code')) {
+        document.getElementById('otp_code').value = data.otp_code;
+      }
+    } else {
+      msgDiv.innerHTML = `<div class="alert alert-danger mt-2 py-2 small"><i class="fa fa-triangle-exclamation me-1"></i> ${data.message}</div>`;
+    }
+  })
+  .catch(e => {
+    alert('Failed to send OTP. Please check server logs.');
+  });
+}
+
+function confirmOTP(purpose) {
+  const phone = document.getElementById('phone').value.trim();
+  const otp_code = document.getElementById('otp_code').value.trim();
+
+  if (!phone || !otp_code) {
+    alert('Please enter phone number and OTP code.');
+    return;
+  }
+
+  fetch('/api/otp/verify', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ phone, otp_code, purpose })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const msgDiv = document.getElementById('otp-status-msg');
+    if (data.success) {
+      msgDiv.innerHTML = `<div class="alert alert-success mt-2 py-2 small"><i class="fa fa-shield-check me-1"></i> ✅ OTP Verified Successfully! You can complete registration.</div>`;
+    } else {
+      msgDiv.innerHTML = `<div class="alert alert-danger mt-2 py-2 small"><i class="fa fa-circle-xmark me-1"></i> ${data.message}</div>`;
+    }
+  });
+}
+</script>
+{% endblock %}
+{% endblock %}

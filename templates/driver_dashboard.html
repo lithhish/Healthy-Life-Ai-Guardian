@@ -1,0 +1,879 @@
+{% extends "base.html" %}
+
+{% block page_title %}Driver Health Command Center{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+{% endblock %}
+
+
+{% block content %}
+<style>
+    .pulse-heart { animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(255,0,60,0.8)); } 100% { transform: scale(1); } }
+    
+    .breath-lungs { animation: breath 3s infinite ease-in-out; }
+    @keyframes breath { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 8px rgba(0,255,255,0.8)); } 100% { transform: scale(1); opacity: 0.8; } }
+    
+    .vital-title { font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; margin-bottom: 5px; }
+    .vital-value { font-family: 'Share Tech Mono', monospace; font-size: 2.2rem; font-weight: 700; text-shadow: 0 0 15px currentColor; }
+    .vital-unit { font-size: 1rem; color: #64748b; font-weight: 600; }
+    
+    .timeline-flow { display: flex; justify-content: space-between; position: relative; padding: 20px 0; overflow-x: auto; scrollbar-width: none; }
+    .timeline-flow::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.1); z-index: 0; }
+    .timeline-step { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; min-width: 80px; }
+    .timeline-node { width: 40px; height: 40px; border-radius: 50%; background: #0f172a; border: 2px solid #334155; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; transition: all 0.3s; }
+    .timeline-step.active .timeline-node { border-color: var(--color-cyan); color: var(--color-cyan); box-shadow: 0 0 15px var(--color-cyan-glow); }
+    .timeline-step.completed .timeline-node { border-color: var(--color-success); background: var(--color-success); color: #000; box-shadow: 0 0 15px rgba(0,230,118,0.5); }
+    .timeline-label { margin-top: 10px; font-size: 0.75rem; text-align: center; color: #94a3b8; font-weight: 600; }
+</style>
+<div class="container-fluid">
+    
+    <!-- Driver ID & Profile Header Bar -->
+    <div class="glass-card mb-4 py-2.5 px-3.5 d-flex justify-content-between align-items-center flex-wrap gap-3" style="border: 1px solid rgba(0,240,255,0.4); background: rgba(10, 25, 47, 0.75);">
+      <div class="d-flex align-items-center gap-3">
+        <img src="{{ url_for('static', filename='images/guardian_logo.jpg') }}" alt="AI Guardian Logo" 
+             style="width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 2px solid var(--color-cyan); box-shadow: 0 0 15px var(--color-cyan-glow);">
+        <div>
+          <h5 class="mb-0 text-white fw-bold d-flex align-items-center gap-2">
+            <i class="fa fa-steering-wheel text-cyan"></i>
+            {{ driver.name if driver else session.get('name', 'Driver') }}
+          </h5>
+          <div style="font-size:0.82rem;" class="text-secondary mt-0.5">
+            DRIVER ID: <span id="driver-id-val" class="text-cyan fw-bold" style="font-family:monospace;">{{ driver.driver_id_code if (driver and driver.driver_id_code) else (session.get('driver_id_code') or 'DRV-000001') }}</span>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-outline-warning text-white ms-2" onclick="shareDriverId()" title="Share or Copy Driver ID for Family Registration">
+          <i class="fa fa-share-nodes me-1 text-warning"></i> Share Driver ID
+        </button>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <label class="text-secondary small me-1"><i class="fa fa-language text-cyan me-1"></i> Voice Language:</label>
+        <select class="form-select form-select-sm bg-dark text-cyan border-cyan" id="driver-language-select" onchange="changeDriverLanguage(this.value)" style="width: auto;">
+          <option value="ta" {% if session.get('preferred_language') == 'ta' %}selected{% endif %}>தமிழ் (Tamil)</option>
+          <option value="en" {% if session.get('preferred_language') == 'en' or not session.get('preferred_language') %}selected{% endif %}>English</option>
+          <option value="hi" {% if session.get('preferred_language') == 'hi' %}selected{% endif %}>हिन्दी (Hindi)</option>
+          <option value="te" {% if session.get('preferred_language') == 'te' %}selected{% endif %}>తెలుగు (Telugu)</option>
+          <option value="kn" {% if session.get('preferred_language') == 'kn' %}selected{% endif %}>ಕನ್ನಡ (Kannada)</option>
+          <option value="ml" {% if session.get('preferred_language') == 'ml' %}selected{% endif %}>മലയാളം (Malayalam)</option>
+        </select>
+        <button class="btn btn-sm btn-outline-cyan" data-bs-toggle="modal" data-bs-target="#profileModal">
+          <i class="fa fa-user-gear me-1"></i> Edit My Profile
+        </button>
+      </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <!-- Column 1: Vitals Inputs Form & AI Predict Results -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="row g-4">
+                <!-- Vitals Input Card -->
+                <div class="col-12">
+                    <div class="glass-card glow-cyan">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 text-cyan" style="font-weight: 700; color: var(--color-cyan);">
+                                <i class="fa-solid fa-heart-pulse me-2"></i> WEARABLE SIMULATOR
+                            </h5>
+                            <button class="btn btn-outline-info btn-sm" id="voice-dictation-btn">
+                                <i class="fa fa-microphone"></i> Dictate Vitals
+                            </button>
+                        </div>
+                        
+                        <p class="text-secondary small mb-3" id="voice-status-text"></p>
+
+                        <form id="vitals-form" class="form-glass">
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">Heart Rate (bpm)</label>
+                                    <input type="number" step="1" class="form-control form-control-sm" id="input-hr" value="72" required>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">Oxygen (SpO₂ %)</label>
+                                    <input type="number" step="1" class="form-control form-control-sm" id="input-spo2" value="98" min="0" max="100" required>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">Body Temp (°C)</label>
+                                    <input type="number" step="0.1" class="form-control form-control-sm" id="input-temp" value="36.8" required>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">Blood Pressure (S/D)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control" id="input-sysbp" value="120" required>
+                                        <span class="input-group-text bg-transparent border-secondary text-secondary">/</span>
+                                        <input type="number" class="form-control" id="input-diabp" value="80" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">Respiration (rpm)</label>
+                                    <input type="number" step="1" class="form-control form-control-sm" id="input-resp" value="14" required>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">Sleep Hours</label>
+                                    <input type="number" step="0.5" class="form-control form-control-sm" id="input-sleep" value="8" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">Stress Level (1-10)</label>
+                                    <input type="number" step="1" class="form-control form-control-sm" id="input-stress" value="2" min="1" max="10" required>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">Fatigue Score (1-10)</label>
+                                    <input type="number" step="1" class="form-control form-control-sm" id="input-fatigue" value="2" min="1" max="10" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Symptom Descriptions</label>
+                                <input type="text" class="form-control form-control-sm" id="input-symptoms" placeholder="e.g. chest pain, numbness, slurred speech, or empty">
+                            </div>
+
+                            <!-- Real-time dynamic location coordinates -->
+                            <input type="hidden" id="input-lat" value="{{ driver.gps_home_lat if (driver and driver.gps_home_lat) else 11.3410 }}">
+                            <input type="hidden" id="input-lng" value="{{ driver.gps_home_lng if (driver and driver.gps_home_lng) else 77.7170 }}">
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-neon flex-fill py-2">
+                                    <i class="fa-solid fa-calculator me-1"></i> Analyze Vitals
+                                </button>
+                                <button type="button" class="btn btn-danger-neon flex-fill py-2" onclick="simulateHeartAttack()">
+                                    🚨 Trigger Emergency
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- AI Voice Assistant Widget -->
+                <div class="col-12">
+                    <div class="glass-card glow-cyan" style="border: 1px solid rgba(0, 255, 255, 0.3);">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="text-cyan mb-0" style="font-weight: 700;">
+                                <i class="fa-solid fa-microphone me-2"></i>AI VOICE HEALTH ASSISTANT
+                            </h5>
+                            <span id="ai-voice-status" class="badge bg-secondary">IDLE</span>
+                        </div>
+                        <p class="text-secondary small mb-3">"Say Hi or Hello to talk"</p>
+                        
+                        <div class="d-flex gap-2 mb-3">
+                            <button id="ai-voice-btn" class="btn btn-outline-cyan btn-sm flex-fill">
+                                🎤 TALK TO AI
+                            </button>
+                            <button id="ai-voice-repeat" class="btn btn-outline-info btn-sm flex-fill">
+                                🔊 REPEAT
+                            </button>
+                            <button id="ai-voice-stop" class="btn btn-outline-danger btn-sm flex-fill">
+                                ⏹ STOP
+                            </button>
+                        </div>
+
+                        <div class="p-2 rounded bg-dark border border-secondary" style="height: 120px; overflow-y: auto;">
+                            <p class="small text-muted mb-1" id="ai-voice-input"><strong class="text-primary">Driver:</strong> <span class="text-white">-</span></p>
+                            <p class="small text-muted mb-0" id="ai-voice-response"><strong class="text-info">AI:</strong> <span class="text-white">-</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI prediction output details -->
+                <div class="col-12">
+                    <div class="glass-card glow-cyan">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="text-cyan mb-0" style="font-weight: 700;"><i class="fa-solid fa-microchip me-2"></i>AI RISK EVALUATION</h5>
+                            <span class="badge bg-warning text-dark font-weight-bold px-2 py-1"><i class="fa fa-flask me-1"></i>DEMO MODE</span>
+                        </div>
+                        
+                        <!-- Medical Safety Disclaimer Badge required by clinical safety rules -->
+                        <div class="alert alert-dark border border-cyan text-cyan small py-1 px-2 mb-3 rounded" style="background: rgba(6, 182, 212, 0.08);">
+                            <i class="fa fa-info-circle me-1"></i> <strong>Medical Disclaimer:</strong> AI-generated emergency risk assessment. This is not a medical diagnosis.
+                        </div>
+
+                        <div class="row text-center mb-3">
+                            <div class="col-6">
+                                <div class="p-2 border border-secondary rounded bg-dark">
+                                    <label class="text-secondary small d-block mb-0">AI CARDIAC RISK SCORE</label>
+                                    <h2 id="result-risk-score" class="text-cyan mb-0" style="font-family: 'Share Tech Mono', monospace; font-weight: bold;">0 / 100</h2>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 border border-secondary rounded bg-dark">
+                                    <label class="text-secondary small d-block mb-0">RISK TREND</label>
+                                    <h4 id="result-trend" class="text-success mb-0 mt-1" style="font-weight: 700;">STABLE</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-secondary small">Emergency Classification</label>
+                            <h4 id="result-class" class="text-white" style="font-family: 'Share Tech Mono', monospace; font-weight: bold;">Normal</h4>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="text-secondary small d-block">Severity Level</label>
+                                <span id="result-severity" class="badge bg-success">Normal</span>
+                            </div>
+                            <div class="col-6">
+                                <label class="text-secondary small d-block">Confidence Score</label>
+                                <span id="result-confidence" style="font-weight: 600;">100%</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-secondary small">Clinical Context</label>
+                            <p id="result-explanation" class="small text-secondary">Vitals are within physiological limits. No acute stress indicated.</p>
+                        </div>
+                        <div class="p-2.5 rounded" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2);">
+                            <label class="text-warning small d-block font-weight-bold"><i class="fa fa-triangle-exclamation me-1"></i>Medical Directive</label>
+                            <span id="result-action" class="small text-secondary">Continue driving safely. Keep monitoring vitals.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Column 2: Dashboard Gauges, Charts & Dispatch Maps -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="row g-4">
+                
+                <!-- Live Gauges metrics row -->
+                <div class="col-12">
+                    <div class="row g-3">
+                        <div class="col-md-3 col-6">
+                            <div class="glass-card text-center py-3 d-flex flex-column align-items-center justify-content-center" style="height: 100%;">
+                                <div class="vital-title">Heart Rate</div>
+                                <div class="vital-value-container mb-2">
+                                    <span class="vital-value text-danger" id="gauge-hr">72</span>
+                                    <span class="vital-unit">bpm</span>
+                                </div>
+                                <i class="fa-solid fa-heart pulse-heart text-danger" style="font-size: 1.5rem;"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="glass-card text-center py-3 d-flex flex-column align-items-center justify-content-center" style="height: 100%;">
+                                <div class="vital-title">Oxygen SpO₂</div>
+                                <div class="vital-value-container mb-2">
+                                    <span class="vital-value" id="gauge-spo2" style="color: var(--color-cyan);">98</span>
+                                    <span class="vital-unit">%</span>
+                                </div>
+                                <i class="fa-solid fa-lungs breath-lungs" style="font-size: 1.5rem; color: var(--color-cyan);"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="glass-card text-center py-3 d-flex flex-column align-items-center justify-content-center" style="height: 100%;">
+                                <div class="vital-title">Temperature</div>
+                                <div class="vital-value-container mb-2">
+                                    <span class="vital-value text-warning" id="gauge-temp">36.8</span>
+                                    <span class="vital-unit">°C</span>
+                                </div>
+                                <i class="fa-solid fa-temperature-half text-warning" style="font-size: 1.5rem;"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="glass-card text-center py-3 d-flex flex-column align-items-center justify-content-center" style="height: 100%;">
+                                <div class="vital-title">Blood Pressure</div>
+                                <div class="vital-value-container mb-2">
+                                    <span class="vital-value text-white" id="gauge-bp" style="font-size: 1.8rem;">120/80</span>
+                                </div>
+                                <i class="fa-solid fa-gauge-high text-white" style="font-size: 1.5rem; opacity: 0.7;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stress & Fatigue slider bars -->
+                <div class="col-12">
+                    <div class="glass-card py-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 mb-2 mb-md-0">
+                                <div class="d-flex justify-content-between mb-1 small text-secondary">
+                                    <span>Stress Level Indicator</span>
+                                    <span>Scale 1-10</span>
+                                </div>
+                                <div class="progress" style="height: 8px; background: rgba(255,255,255,0.05);">
+                                    <div class="progress-bar bg-info" id="gauge-stress" role="progressbar" style="width: 20%"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-between mb-1 small text-secondary">
+                                    <span>Cognitive Fatigue Level</span>
+                                    <span>Scale 1-10</span>
+                                </div>
+                                <div class="progress" style="height: 8px; background: rgba(255,255,255,0.05);">
+                                    <div class="progress-bar bg-warning" id="gauge-fatigue" role="progressbar" style="width: 20%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Incident timeline tracker -->
+                <div class="col-12">
+                    <div class="glass-card">
+                        <h6 class="text-cyan mb-2" style="font-weight: 700;"><i class="fa-solid fa-clock-rotate-left me-2"></i>EMERGENCY LOGISTICS SEQUENCE FLOW</h6>
+                        <div class="timeline-flow" id="emergency-timeline-flow">
+                            <div class="timeline-step" id="step-vitals">
+                                <div class="timeline-node"><i class="fa fa-file-medical"></i></div>
+                                <div class="timeline-label">Vitals Logged</div>
+                            </div>
+                            <div class="timeline-step" id="step-prediction">
+                                <div class="timeline-node"><i class="fa fa-microchip"></i></div>
+                                <div class="timeline-label">AI Diagnostic</div>
+                            </div>
+                            <div class="timeline-step" id="step-voice">
+                                <div class="timeline-node"><i class="fa fa-volume-up"></i></div>
+                                <div class="timeline-label">Voice Alerted</div>
+                            </div>
+                            <div class="timeline-step" id="step-hospital">
+                                <div class="timeline-node"><i class="fa fa-hospital-user"></i></div>
+                                <div class="timeline-label">Hospital Match</div>
+                            </div>
+                            <div class="timeline-step" id="step-ambulance">
+                                <div class="timeline-node"><i class="fa fa-truck-medical"></i></div>
+                                <div class="timeline-label">Ambulance Call</div>
+                            </div>
+                            <div class="timeline-step" id="step-family">
+                                <div class="timeline-node"><i class="fa fa-users"></i></div>
+                                <div class="timeline-label">Family Alerted</div>
+                            </div>
+                            <div class="timeline-step" id="step-hospital-notified">
+                                <div class="timeline-node"><i class="fa fa-envelope-circle-check"></i></div>
+                                <div class="timeline-label">Hospital Pinged</div>
+                            </div>
+                            <div class="timeline-step" id="step-report">
+                                <div class="timeline-node"><i class="fa fa-file-pdf"></i></div>
+                                <div class="timeline-label">Report Ready</div>
+                            </div>
+                            <div class="timeline-step" id="step-arrived">
+                                <div class="timeline-node"><i class="fa fa-check-circle"></i></div>
+                                <div class="timeline-label">Arrived</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Google Maps display container & Logistics Details -->
+                <div class="col-12">
+                    <div class="row g-4">
+                        <div class="col-md-7">
+                            <div class="glass-card p-3 position-relative d-flex flex-column" style="height: 100%;">
+                                <!-- GPS Control Header -->
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="text-cyan mb-0" style="font-weight: 700;"><i class="fa-solid fa-satellite-dish me-2"></i>LIVE GPS TRACKING</h6>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <input type="radio" class="btn-check" name="gpsMode" id="gpsModeReal" value="real" checked autocomplete="off">
+                                        <label class="btn btn-outline-info" for="gpsModeReal">REAL GPS</label>
+                                        <input type="radio" class="btn-check" name="gpsMode" id="gpsModeDemo" value="demo" autocomplete="off">
+                                        <label class="btn btn-outline-info" for="gpsModeDemo">DEMO SIMULATION</label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Map Container with Overlays -->
+                                <div class="position-relative flex-grow-1" style="min-height: 450px;">
+                                    <div id="map" style="border-radius: 12px; height: 100%; min-height: 450px; position: relative; z-index: 1;"></div>
+
+                                    <!-- Floating Recenter Map Button -->
+                                    <button id="recenter-map-btn" type="button" class="btn btn-sm btn-dark text-cyan position-absolute" 
+                                            style="bottom: 20px; right: 20px; z-index: 1000; backdrop-filter: blur(10px); background: rgba(15,23,42,0.85); border: 1px solid var(--color-cyan); border-radius: 20px; font-weight: 600; font-size: 0.75rem; box-shadow: 0 0 12px rgba(0,229,255,0.4);"
+                                            onclick="if (window.NavigationSystem) NavigationSystem.recenterMap();">
+                                        <i class="fa-solid fa-crosshairs me-1 text-cyan"></i> RECENTER VEHICLE
+                                    </button>
+
+                                    <!-- GPS Status Overlay (Bottom Left Overlay) -->
+                                    <div id="gps-overlay" class="position-absolute glass-card p-2" style="bottom: 15px; left: 15px; z-index: 1000; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--color-cyan); min-width: 200px;">
+                                        <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-1 mb-1">
+                                            <span class="small font-weight-bold" style="color: #94a3b8;">CURRENT LOCATION</span>
+                                            <span id="gps-status-badge" class="badge bg-warning text-dark"><i class="fa fa-spinner fa-spin me-1"></i> SEARCHING</span>
+                                        </div>
+                                        <div class="row g-1 small">
+                                            <div class="col-6"><span class="text-secondary">Lat:</span> <span id="gps-lat" class="text-white">--</span></div>
+                                            <div class="col-6"><span class="text-secondary">Lng:</span> <span id="gps-lng" class="text-white">--</span></div>
+                                            <div class="col-6"><span class="text-secondary">Speed:</span> <span id="gps-speed" class="text-cyan font-weight-bold">0 km/h</span></div>
+                                            <div class="col-6"><span class="text-secondary">Accuracy:</span> <span id="gps-acc" class="text-white">--</span></div>
+                                        </div>
+                                        <div class="text-end mt-1">
+                                            <span class="text-secondary" style="font-size: 0.65rem;">Updated: <span id="gps-time">--:--:--</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="glass-card d-flex flex-column justify-content-between h-100 glow-cyan">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="text-cyan mb-0" style="font-weight: 700;"><i class="fa-solid fa-location-dot me-2"></i>LOGISTICS DISPATCH</h6>
+                                    <span id="dispatch-status-badge" class="badge bg-info text-dark">STANDBY MONITORING</span>
+                                </div>
+                                
+                                <div class="small">
+                                    <div class="border-bottom border-secondary pb-2 mb-2">
+                                        <span class="text-secondary d-block">Recommended Medical Specialty Center</span>
+                                        <strong id="hosp-name" class="text-white">N/A</strong>
+                                        <span id="hosp-address" class="d-block text-secondary small">--</span>
+                                        <span id="hosp-phone" class="text-cyan small d-block">--</span>
+                                    </div>
+
+                                    <div class="border-bottom border-secondary pb-2 mb-2">
+                                        <span class="text-secondary d-block">Simulated Ambulance Crew</span>
+                                        <strong id="amb-veh" class="text-white">N/A</strong>
+                                        <span id="amb-driver" class="d-block text-secondary small">--</span>
+                                        <span id="amb-phone" class="text-cyan small d-block">--</span>
+                                    </div>
+                                    
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <span class="text-secondary d-block">Travel Distance</span>
+                                            <h5 id="hosp-distance" class="mb-0 text-white font-weight-bold" style="font-family: 'Share Tech Mono', monospace;">0 km</h5>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="text-secondary d-block">ETA to Target</span>
+                                            <h5 id="amb-eta" class="mb-0 text-cyan font-weight-bold" style="font-family: 'Share Tech Mono', monospace;">0 mins</h5>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-column gap-2">
+                                    <a id="nav-route-btn" href="#" 
+                                       onclick="openDirectNavigation(event, this)"
+                                       class="btn btn-neon py-2 text-center" style="display: none;">
+                                        <i class="fa-solid fa-diamond-turn-right me-1"></i> Navigate Now
+                                    </a>
+                                    
+                                    <div id="download-report-btn" style="display: none;">
+                                        <a id="download-pdf-link" href="#" class="btn btn-outline-info py-2 w-100 text-center">
+                                            <i class="fa-solid fa-file-pdf me-1"></i> Download PDF Report
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historical Charts trend visualization -->
+                <div class="col-12">
+                    <div class="glass-card">
+                        <h6 class="text-cyan mb-3" style="font-weight: 700;"><i class="fa-solid fa-chart-line me-2"></i>BIOMETRIC VITAL SIGNS TRENDS</h6>
+                        <div style="height: 220px;">
+                            <canvas id="vitalsTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== CURRENT EMERGENCY REPORT ===== -->
+{% if past_incidents %}
+{% set latest = past_incidents[0] %}
+<div class="container-fluid pb-4">
+    <div class="glass-card" style="border: 1px solid rgba(99,102,241,0.25); background: rgba(15,23,42,0.9);">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h6 class="text-white fw-bold mb-0" style="font-size:1rem;">
+                <i class="fa fa-file-medical me-2" style="color:#a78bfa;"></i>MY EMERGENCY MEDICAL REPORT
+            </h6>
+            <span class="badge bg-dark border font-monospace" style="border-color:rgba(99,102,241,0.4)!important;color:#a78bfa;font-size:0.72rem;">
+                {{ past_incidents|length }} record(s) total
+            </span>
+        </div>
+
+        <div class="d-flex flex-column gap-2">
+            {% for inc in past_incidents %}
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-3 rounded-3"
+                 style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <span class="badge bg-dark border font-monospace px-2 py-1"
+                          style="border-color:rgba(6,182,212,0.5)!important;color:#22d3ee;font-size:0.72rem;">
+                        {{ inc.emergency_code or ('EMG-%06d' % inc.id) }}
+                    </span>
+                    <span class="fw-semibold {% if inc.severity|upper == 'CRITICAL' %}text-danger{% elif inc.severity|upper == 'HIGH' %}text-warning{% else %}text-info{% endif %}" style="font-size:0.85rem;">
+                        {{ inc.prediction or 'N/A' }}
+                    </span>
+                    <span class="badge {% if inc.severity|upper == 'CRITICAL' %}bg-danger{% elif inc.severity|upper == 'HIGH' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}" style="font-size:0.68rem;">
+                        {{ inc.severity|upper if inc.severity else 'N/A' }}
+                    </span>
+                    <span class="text-secondary small">{{ inc.hospital_name or 'Not assigned' }}</span>
+                    <span class="text-white-50 small" style="white-space:nowrap;">{{ inc.timestamp or '—' }}</span>
+                    {% if inc.bill_total %}
+                    <span class="text-amber fw-bold font-monospace small">₹{{ "%.0f"|format(inc.bill_total) }}</span>
+                    {% endif %}
+                    {% set st = inc.status|upper if inc.status else '' %}
+                    {% if st in ['COMPLETED', 'RESOLVED', 'TREATED', 'DISCHARGED'] %}
+                    <span class="badge" style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.4);font-size:0.68rem;">✅ {{ inc.status }}</span>
+                    {% elif st == 'REJECTED' %}
+                    <span class="badge" style="background:rgba(244,63,94,0.15);color:#fb7185;border:1px solid rgba(244,63,94,0.4);font-size:0.68rem;">❌ REJECTED</span>
+                    {% elif st in ['HOSPITAL_ACCEPTED', 'PATIENT_ADMITTED', 'AMBULANCE_DISPATCHED'] %}
+                    <span class="badge" style="background:rgba(6,182,212,0.15);color:#22d3ee;border:1px solid rgba(6,182,212,0.4);font-size:0.68rem;">{{ inc.status }}</span>
+                    {% else %}
+                    <span class="badge" style="background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);font-size:0.68rem;">{{ inc.status or '—' }}</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2">
+                    {% if inc.pdf_filename %}
+                    <button class="btn btn-sm fw-semibold"
+                            style="background:rgba(99,102,241,0.15);color:#a78bfa;border:1px solid rgba(99,102,241,0.3);font-size:0.75rem;border-radius:8px;"
+                            onclick="viewReport('/static/reports/{{ inc.pdf_filename }}', '{{ inc.emergency_code or ('EMG-%06d' % inc.id) }}')">
+                        <i class="fa fa-eye me-1"></i>View Report
+                    </button>
+                    <a href="/static/reports/{{ inc.pdf_filename }}" download
+                       class="btn btn-sm fw-semibold"
+                       style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);font-size:0.75rem;border-radius:8px;">
+                        <i class="fa fa-download me-1"></i>Download
+                    </a>
+                    {% elif inc.report_id_code %}
+                    <a href="/api/emergency/report/{{ inc.id }}" target="_blank"
+                       class="btn btn-sm fw-semibold"
+                       style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);font-size:0.75rem;border-radius:8px;">
+                        <i class="fa fa-file-pdf me-1"></i>View Report
+                    </a>
+                    {% else %}
+                    <span class="text-muted small py-1 px-2">No report yet</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Report View Modal -->
+<div class="modal fade" id="reportViewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content" style="background:rgba(15,23,42,0.98);border:1px solid rgba(99,102,241,0.3);backdrop-filter:blur(16px);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white fw-bold" id="reportModalTitle">
+                    <i class="fa fa-file-medical text-violet me-2"></i>Medical Report
+                </h5>
+                <div class="d-flex gap-2">
+                    <a id="reportDownloadLink" href="#" download class="btn btn-sm btn-warning fw-bold">
+                        <i class="fa fa-download me-1"></i>Download PDF
+                    </a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0" style="height:78vh;">
+                <iframe id="reportFrame" src="" style="width:100%;height:100%;border:none;border-radius:0 0 8px 8px;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0" style="font-size:0.82rem;">
+                <thead>
+                    <tr class="text-secondary text-uppercase" style="font-size:0.7rem;letter-spacing:0.04em;">
+                        <th>Emergency Code</th>
+                        <th>Condition</th>
+                        <th>Severity</th>
+                        <th>Hospital</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Bill</th>
+                        <th class="text-end">Reports</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if past_incidents %}
+                        {% for inc in past_incidents %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-dark border font-monospace px-2 py-1"
+                                      style="border-color:rgba(6,182,212,0.5)!important;color:#22d3ee;font-size:0.72rem;">
+                                    {{ inc.emergency_code or ('EMG-%06d' % inc.id) }}
+                                </span>
+                            </td>
+                            <td class="fw-semibold {% if inc.severity|upper == 'CRITICAL' %}text-danger{% elif inc.severity|upper == 'HIGH' %}text-warning{% else %}text-info{% endif %}">
+                                {{ inc.prediction or 'N/A' }}
+                            </td>
+                            <td>
+                                <span class="badge {% if inc.severity|upper == 'CRITICAL' %}bg-danger{% elif inc.severity|upper == 'HIGH' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}" style="font-size:0.7rem;">
+                                    {{ inc.severity|upper if inc.severity else 'N/A' }}
+                                </span>
+                            </td>
+                            <td class="text-secondary small">{{ inc.hospital_name or 'Not assigned' }}</td>
+                            <td class="text-white-50 small" style="white-space:nowrap;">{{ inc.timestamp or '—' }}</td>
+                            <td>
+                                {% set st = inc.status|upper if inc.status else '' %}
+                                {% if st in ['COMPLETED', 'RESOLVED', 'TREATED', 'DISCHARGED'] %}
+                                <span class="badge" style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.4);font-size:0.68rem;">✅ {{ inc.status }}</span>
+                                {% elif st in ['HOSPITAL_ACCEPTED', 'PATIENT_ADMITTED', 'AMBULANCE_DISPATCHED'] %}
+                                <span class="badge" style="background:rgba(6,182,212,0.15);color:#22d3ee;border:1px solid rgba(6,182,212,0.4);font-size:0.68rem;">{{ inc.status }}</span>
+                                {% else %}
+                                <span class="badge" style="background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);font-size:0.68rem;">{{ inc.status or '—' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if inc.bill_total %}
+                                <span class="text-amber fw-bold font-monospace small">₹{{ "%.0f"|format(inc.bill_total) }}</span>
+                                {% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-flex gap-1 justify-content-end">
+                                    {% if inc.pdf_filename %}
+                                    <button class="btn btn-sm fw-semibold"
+                                            style="background:rgba(99,102,241,0.15);color:#a78bfa;border:1px solid rgba(99,102,241,0.3);font-size:0.75rem;border-radius:8px;"
+                                            onclick="viewReport('/static/reports/{{ inc.pdf_filename }}', '{{ inc.emergency_code or ('EMG-%06d' % inc.id) }}')">
+                                        <i class="fa fa-eye me-1"></i>View
+                                    </button>
+                                    <a href="/static/reports/{{ inc.pdf_filename }}" download class="btn btn-sm fw-semibold"
+                                       style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);font-size:0.75rem;border-radius:8px;">
+                                        <i class="fa fa-download me-1"></i>Download
+                                    </a>
+                                    {% elif inc.report_id_code %}
+                                    <a href="/api/emergency/report/{{ inc.id }}" target="_blank" class="btn btn-sm fw-semibold"
+                                       style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);font-size:0.75rem;border-radius:8px;">
+                                        <i class="fa fa-file-pdf me-1"></i>Report
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted small">No report yet</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="fa fa-shield-heart text-success me-2"></i>No emergency incidents recorded. Stay healthy!
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Report View Modal -->
+<div class="modal fade" id="reportViewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content" style="background:rgba(15,23,42,0.98);border:1px solid rgba(99,102,241,0.3);backdrop-filter:blur(16px);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white fw-bold" id="reportModalTitle">
+                    <i class="fa fa-file-medical text-violet me-2"></i>Medical Report
+                </h5>
+                <div class="d-flex gap-2">
+                    <a id="reportDownloadLink" href="#" download class="btn btn-sm btn-warning fw-bold">
+                        <i class="fa fa-download me-1"></i>Download PDF
+                    </a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0" style="height:78vh;">
+                <iframe id="reportFrame" src="" style="width:100%;height:100%;border:none;border-radius:0 0 8px 8px;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="profileModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-white border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-cyan"><i class="fa fa-user-pen me-2"></i>Edit My Driver Profile</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="driver-self-profile-form">
+          <div class="mb-3">
+            <label class="form-label">Account Username</label>
+            <input type="text" class="form-control" name="username" value="{{ session.get('username','') }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-control" name="name" value="{{ driver.name if driver else session.get('name','') }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input type="text" class="form-control" name="phone" value="{{ driver.phone if driver else '' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-control" name="email" value="{{ driver.email if (driver and driver.email) else session.get('email','') }}" placeholder="driver@example.com">
+          </div>
+          <div class="row mb-3">
+            <div class="col-6">
+              <label class="form-label">Age</label>
+              <input type="number" class="form-control" name="age" value="{{ driver.age if driver else '' }}">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Blood Group</label>
+              <input type="text" class="form-control" name="blood_group" value="{{ driver.blood_group if driver else '' }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Medical History</label>
+            <textarea class="form-control" name="medical_history" rows="2">{{ driver.medical_history if driver else '' }}</textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Residential Address</label>
+            <input type="text" class="form-control" name="address" value="{{ driver.address if driver else '' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Update Password (Leave empty to keep current)</label>
+            <input type="password" class="form-control" name="password" placeholder="New Password">
+          </div>
+          <button type="button" class="btn btn-cyan w-100" onclick="saveDriverProfile()">Save Profile Updates</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Inject backend variables for JS use
+    window.driverName = "{{ driver.name if driver else session.get('name', 'Driver') }}";
+    window.driverInitialLat = {{ driver.gps_home_lat if (driver and driver.gps_home_lat) else 11.2720 }};
+    window.driverInitialLng = {{ driver.gps_home_lng if (driver and driver.gps_home_lng) else 77.5920 }};
+
+    function changeDriverLanguage(lang) {
+        fetch('/api/voice/language-override', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ language: lang })
+        })
+        .then(r => r.json())
+        .then(res => {
+            console.log(`[LanguageManager] Language set to ${lang}`);
+        });
+    }
+
+    // Simulate heart attack risk values to trigger rapid validation
+    function simulateHeartAttack() {
+        document.getElementById('input-hr').value = 142;
+        document.getElementById('input-spo2').value = 81;
+        document.getElementById('input-temp').value = 36.8;
+        document.getElementById('input-sysbp').value = 175;
+        document.getElementById('input-diabp').value = 105;
+        document.getElementById('input-resp').value = 28;
+        document.getElementById('input-sleep').value = 4;
+        document.getElementById('input-stress').value = 9;
+        document.getElementById('input-fatigue').value = 9;
+        document.getElementById('input-symptoms').value = "severe chest pain and numbness, left arm tightness";
+        
+        if (typeof submitVitals === 'function') {
+            submitVitals();
+        }
+    }
+
+    function shareDriverId() {
+        let driverId = document.getElementById('driver-id-val')?.textContent?.trim();
+        if (!driverId || driverId === '' || driverId.includes('None')) {
+            driverId = "{{ driver.driver_id_code if (driver and driver.driver_id_code) else (session.get('driver_id_code') or '') }}";
+        }
+        if (!driverId || driverId.trim() === '') {
+            alert("Your Driver ID is currently being assigned by the system. Please reload the page to view and share your Driver ID.");
+            return;
+        }
+        const cleanDriverId = driverId.trim();
+        const shareData = {
+            title: 'AI Driver Health Guardian - Driver ID',
+            text: `My AI Driver Health Guardian Driver ID is: ${cleanDriverId}. Use this Driver ID when registering your Family Account to link our profiles!`,
+            url: window.location.origin + '/register/family'
+        };
+
+        if (navigator.share) {
+            navigator.share(shareData).catch(() => {
+                copyDriverIdToClipboard(cleanDriverId);
+            });
+        } else {
+            copyDriverIdToClipboard(cleanDriverId);
+        }
+    }
+
+
+    function copyDriverIdToClipboard(driverId) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(driverId).then(() => {
+                alert(`✅ Driver ID '${driverId}' copied to clipboard!\n\nShare this ID with your family members to link their account during Family Registration.`);
+            }).catch(() => {
+                prompt("Copy your Driver ID:", driverId);
+            });
+        } else {
+            prompt("Copy your Driver ID:", driverId);
+        }
+    }
+
+    function viewReport(pdfUrl, emgCode) {
+        document.getElementById('reportFrame').src = pdfUrl;
+        document.getElementById('reportModalTitle').innerHTML = `<i class="fa fa-file-medical text-violet me-2"></i>Medical Report — <span class="font-monospace text-cyan">${emgCode}</span>`;
+        document.getElementById('reportDownloadLink').href = pdfUrl;
+        new bootstrap.Modal(document.getElementById('reportViewModal')).show();
+    }
+
+
+    function saveDriverProfile() {
+      const form = document.getElementById('driver-self-profile-form');
+      const formData = new FormData(form);
+      const json = {};
+      formData.forEach((v, k) => json[k] = v);
+
+      fetch('/api/profile/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(json)
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error updating profile: ' + (data.message || data.error));
+        }
+      });
+    }
+
+    /**
+     * openDirectNavigation — immediately launches Google Maps navigation
+     * Clicking the direction/turn symbol opens navigation directly (no extra step)
+     */
+    function openDirectNavigation(event, linkEl) {
+        event.preventDefault();
+        const href = linkEl.getAttribute('href') || linkEl.dataset.mapsUrl;
+        if (!href || href === '#') {
+            alert('🗺️ Navigation route not set yet. Please run a health analysis first to detect your nearest hospital.');
+            return;
+        }
+        // Directly open navigation
+        window.open(href, '_blank', 'noopener,noreferrer');
+    }
+
+    // Patch nav-route-btn to store URL as data attribute for safety
+    document.addEventListener('DOMContentLoaded', function() {
+        const navBtn = document.getElementById('nav-route-btn');
+        if (navBtn) {
+            // Override href setter to also set data-maps-url
+            const origObserver = new MutationObserver(() => {
+                const href = navBtn.getAttribute('href');
+                if (href && href !== '#') {
+                    navBtn.dataset.mapsUrl = href;
+                }
+            });
+            origObserver.observe(navBtn, { attributes: true, attributeFilter: ['href'] });
+        }
+    });
+
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
+<script src="{{ url_for('static', filename='js/emergency_mode.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ambulance.js') }}"></script>
+<script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/voice_assistant.js') }}"></script>
+{% endblock %}

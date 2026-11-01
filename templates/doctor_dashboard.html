@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Doctor Command Portal — AI Driver Health Guardian{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-cyan mb-1" style="font-weight: 800;"><i class="fa-solid fa-user-doctor me-2"></i>DOCTOR CLINICAL PORTAL</h2>
+            <p class="text-secondary small mb-0">Emergency Patient Triage, ECG Summary, Vitals & Treatment Notes</p>
+        </div>
+        <div>
+            <span class="badge bg-success px-3 py-2"><i class="fa fa-hospital me-1"></i> Hospital ID: {{ session.get('hospital_id', 1) }}</span>
+            <span class="badge bg-info px-3 py-2 ms-2"><i class="fa fa-user me-1"></i> {{ session.get('name', 'Doctor') }}</span>
+        </div>
+    </div>
+
+    <!-- Active Emergency Cases for Doctor -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="glass-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-cyan mb-0" style="font-weight: 700;"><i class="fa fa-heart-pulse me-2"></i>ASSIGNED EMERGENCY PATIENTS</h5>
+                    <button class="btn btn-sm btn-outline-cyan" onclick="loadDoctorCases()"><i class="fa fa-sync me-1"></i> Refresh</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-secondary small">
+                                <th>Patient / Driver</th>
+                                <th>Emergency Type</th>
+                                <th>AI Risk Score</th>
+                                <th>Vitals (HR / SpO₂)</th>
+                                <th>ECG Rhythm</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="doctor-cases-tbody">
+                            <tr>
+                                <td><i class="fa fa-user-circle me-2 text-cyan"></i> Driver #101</td>
+                                <td><span class="badge bg-danger">Critical Cardiac Risk</span></td>
+                                <td><span class="badge bg-danger fs-6">87 / 100</span></td>
+                                <td>145 bpm | SpO₂ 84%</td>
+                                <td><span class="badge bg-warning text-dark">Sinus Tachycardia</span></td>
+                                <td><span class="badge bg-info">IN_TRANSIT</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-cyan" onclick="openClinicalModal('Driver #101', 'Critical Cardiac Risk', 87)">Review & Clinical Notes</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="glass-card">
+                <h5 class="text-cyan mb-3" style="font-weight: 700;"><i class="fa fa-file-medical me-2"></i>CLINICAL DECISION ASSISTANT</h5>
+                <div class="alert alert-dark border border-cyan text-cyan small mb-3">
+                    <i class="fa fa-shield-halved me-1"></i> <strong>Safety Disclaimer:</strong> AI-generated emergency risk assessment. This is not a medical diagnosis.
+                </div>
+                <div class="p-3 rounded bg-dark border border-secondary mb-3">
+                    <h6 class="text-warning small font-weight-bold mb-1"><i class="fa fa-lightbulb me-1"></i> Suggested Protocol</h6>
+                    <p class="small text-secondary mb-0">Prepare ICU Bed #3, continuous 12-lead ECG monitoring, oxygen therapy, and emergency IV access upon patient arrival.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clinical Consultation & Treatment Modal -->
+<div class="modal fade" id="clinicalNotesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-card" style="background: rgba(15, 23, 42, 0.96); border:1px solid var(--color-cyan);">
+            <div class="modal-header border-bottom border-cyan">
+                <h5 class="modal-title text-cyan"><i class="fa fa-stethoscope me-2"></i> Doctor Clinical Consultation & Treatment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modal-emergency-id">
+                <input type="hidden" id="modal-driver-id">
+
+                <!-- Side-by-side: Previous Medical History vs Current Emergency -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded bg-dark border border-secondary">
+                            <h6 class="text-info small font-weight-bold mb-2"><i class="fa fa-history me-1"></i> PREVIOUS MEDICAL HISTORY</h6>
+                            <div class="small text-secondary mb-1">Patient: <strong id="modal-patient-name" class="text-white">Lithhish</strong></div>
+                            <div class="small text-secondary mb-1">Age / Gender: <strong id="modal-patient-age" class="text-white">52 / Male</strong></div>
+                            <div class="small text-secondary mb-1">Known Conditions: <span id="modal-history-diseases" class="badge bg-secondary">Diabetes, Hypertension</span></div>
+                            <div class="small text-secondary">Allergies: <span id="modal-history-allergies" class="text-warning">Penicillin (Mild)</span></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded bg-dark border border-danger">
+                            <h6 class="text-danger small font-weight-bold mb-2"><i class="fa fa-heart-pulse me-1"></i> CURRENT EMERGENCY</h6>
+                            <div class="small text-secondary mb-1">Suspected Condition: <strong id="modal-current-emergency" class="text-warning">Suspected Cardiac Emergency</strong></div>
+                            <div class="small text-secondary mb-1">AI Risk Level: <span id="modal-risk-badge" class="badge bg-danger">CRITICAL (95%)</span></div>
+                            <div class="small text-secondary">Registered Vitals: <span id="modal-vitals-summary" class="text-white">HR: 145 BPM | SpO2: 82%</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Fields -->
+                <div class="mb-3">
+                    <label class="form-label text-cyan small fw-bold">Confirmed Doctor Diagnosis</label>
+                    <input type="text" id="doctor-diagnosis" class="form-control bg-dark text-white border-secondary" value="Suspected Cardiac Emergency — Acute Myocardial Infarction">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-cyan small fw-bold">Treatment Plan & Procedures</label>
+                    <textarea id="doctor-treatment" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="e.g. Oxygen therapy, continuous ECG, IV Heparin, Sublingual Nitroglycerin...">Bed rest, Oxygen support, continuous 12-lead ECG, IV access, Cardiac Care Unit admission.</textarea>
+                </div>
+
+                <!-- Medicines & Dosage Section -->
+                <h6 class="text-cyan small fw-bold mb-2"><i class="fa fa-pills me-1"></i> Prescribed Medicines & Dosage</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                        <input type="text" id="med-name" class="form-control form-control-sm bg-dark text-white" placeholder="Medicine Name (e.g. Aspirin)">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" id="med-dosage" class="form-control form-control-sm bg-dark text-white" placeholder="Dosage (e.g. 150mg 1-0-1)">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" id="med-qty" class="form-control form-control-sm bg-dark text-white" value="1" placeholder="Qty">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" class="btn btn-sm btn-outline-cyan w-100" onclick="addMedicineItem()"><i class="fa fa-plus me-1"></i> Add Medicine</button>
+                    </div>
+                </div>
+                <div id="medicine-list-container" class="mb-3">
+                    <span class="badge bg-secondary p-2 me-1 mb-1">Aspirin 150mg (Qty: 1)</span>
+                    <span class="badge bg-secondary p-2 me-1 mb-1">Atorvastatin 40mg (Qty: 1)</span>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="button" class="btn btn-cyan flex-fill" onclick="submitClinicalConsultation()"><i class="fa fa-check-circle me-1"></i> Complete Consultation, Save Report & Generate Bill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentMedicines = [
+    { name: "Aspirin", dosage: "150mg", qty: 1, price: 50.0 },
+    { name: "Atorvastatin", dosage: "40mg", qty: 1, price: 120.0 }
+];
+
+document.addEventListener("DOMContentLoaded", function() {
+    loadDoctorCases();
+});
+
+function loadDoctorCases() {
+    fetch('/api/hospital/active-emergencies')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.emergencies) return;
+            const tbody = document.getElementById('doctor-cases-tbody');
+            if (data.emergencies.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-secondary py-3">No active emergency patients currently assigned.</td></tr>`;
+                return;
+            }
+            let html = '';
+            data.emergencies.forEach(em => {
+                html += `
+                    <tr>
+                        <td><i class="fa fa-user-circle me-2 text-cyan"></i> ${em.driver_name} <br><small class="text-secondary">${em.driver_id_code || 'DRV000001'}</small></td>
+                        <td><span class="badge bg-danger">${em.prediction || 'Suspected Cardiac Emergency'}</span></td>
+                        <td><span class="badge bg-danger fs-6">${em.risk_percentage || 95}%</span></td>
+                        <td>HR: 145 bpm | SpO₂ 82%</td>
+                        <td><span class="badge bg-warning text-dark">ST-Segment Elevation</span></td>
+                        <td><span class="badge bg-info">${em.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-cyan" onclick="openClinicalModal(${em.id}, ${em.driver_id}, '${em.driver_name}', '${em.prediction || 'Suspected Cardiac Emergency'}')">Review & Consultation</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        });
+}
+
+function openClinicalModal(emergId, driverId, name, prediction) {
+    document.getElementById('modal-emergency-id').value = emergId;
+    document.getElementById('modal-driver-id').value = driverId;
+    document.getElementById('modal-patient-name').innerText = name || 'Lithhish';
+    document.getElementById('modal-current-emergency').innerText = prediction || 'Suspected Cardiac Emergency';
+    
+    new bootstrap.Modal(document.getElementById('clinicalNotesModal')).show();
+}
+
+function addMedicineItem() {
+    const name = document.getElementById('med-name').value.trim();
+    const dosage = document.getElementById('med-dosage').value.trim() || '500mg';
+    const qty = parseInt(document.getElementById('med-qty').value) || 1;
+
+    if (!name) {
+        alert('Please enter medicine name');
+        return;
+    }
+
+    currentMedicines.push({ name, dosage, qty, price: 60.0 });
+    renderMedicineBadges();
+    document.getElementById('med-name').value = '';
+}
+
+function renderMedicineBadges() {
+    const container = document.getElementById('medicine-list-container');
+    container.innerHTML = currentMedicines.map((m, i) => `
+        <span class="badge bg-secondary p-2 me-1 mb-1">
+            ${m.name} ${m.dosage} (Qty: ${m.qty}) 
+            <i class="fa fa-times ms-1 text-danger cursor-pointer" onclick="removeMedicine(${i})"></i>
+        </span>
+    `).join('');
+}
+
+function removeMedicine(index) {
+    currentMedicines.splice(index, 1);
+    renderMedicineBadges();
+}
+
+function submitClinicalConsultation() {
+    const emergId = document.getElementById('modal-emergency-id').value;
+    const driverId = document.getElementById('modal-driver-id').value;
+    const diagnosis = document.getElementById('doctor-diagnosis').value;
+    const treatment = document.getElementById('doctor-treatment').value;
+
+    fetch('/api/hospital/patient/consultation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            emergency_id: emergId,
+            driver_id: driverId,
+            diagnosis: diagnosis,
+            treatment: treatment,
+            medicines: currentMedicines
+        })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            alert(`Consultation saved!\nMedical Report: ${res.report_id}\nMedical Bill: ${res.bill_id}\nTotal: ₹${res.grand_total}`);
+            bootstrap.Modal.getInstance(document.getElementById('clinicalNotesModal')).hide();
+            window.location.href = `/billing/${res.bill_id}`;
+        } else {
+            alert('Error: ' + (res.error || 'Failed to save consultation'));
+        }
+    });
+}
+</script>
+{% endblock %}
+
